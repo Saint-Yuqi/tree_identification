@@ -9,7 +9,7 @@ defaults:
   - override hydra/launcher: submitit_slurm
 
 # # select exp_name and ckpt_type (best/last) for which test metrics are to be calculated
-exp_name: 20250902_215836.343422_Unet_resnet50_320_62
+exp_name: 20250902_222459.947460_Unet_resnet50_320_62
 ckpt_type: best
 
 # # Reproducibility: pytorch lightning seed
@@ -20,6 +20,7 @@ log_path: ${log_dir}/${exp_name}
 ckpt_path: ${log_path}/checkpoints
 test_path: ${log_path}/test_${now:%Y%m%d}_${now:%H%M%S.%f}_${ckpt_type}_${data.crop_size_test}
 
+matplotlib_backend: Agg
 matplotlib_style:
   text.usetex: true
   font.family: serif

@@ -33,6 +33,7 @@ def main(cfg: DictConfig) -> None:
     # # get device, set matplotlib style
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     matplotlib.rcParams.update(cfg.matplotlib_style)
+    matplotlib.use(cfg.matplotlib_backend)
     
     # # set pytorch lightning seed
     if cfg.pl_seed:
@@ -49,14 +50,14 @@ def main(cfg: DictConfig) -> None:
     dataModule.setup()
     print('# Train imgs: ', len(dataModule.train_dataset))
     
-    # # get statistics of dataset
-    # class_presence = dataModule.train_dataset.class_presence
-    # total = Counter()
-    # for d in class_presence:
-    #     total.update(d)
-    # total_class_presence = dict(total)
-    # get_keys = [key for key, value in total_class_presence.items() if value >199]
-    # print(get_keys)
+    # get statistics of dataset
+    class_presence = dataModule.train_dataset.class_presence
+    total = Counter()
+    for d in class_presence:
+        total.update(d)
+    total_class_presence = dict(total)
+    get_keys = [key for key, value in total_class_presence.items() if value >1 and value <=50]
+    print(get_keys)
 
     
     # # visualize dims of single image + mask

@@ -63,12 +63,11 @@ classes:
   61: { name: "salix sp.", color: "#f5deb3" }
 
 class_groups:
- bulk: [1, 2, 3, 4, 6, 7, 8, 9, 10, 12, 14, 15, 17] # >200 in train_set & not in extreme-tail
- medium: [19, 21, 22, 25, 30, 33, 34, 36, 40, 45] # >50 & <=200 in train_set & not in extreme-tail
- tail: [26, 35, 47, 49, 53] # <=50 in train_set & not in extreme-tail
- extreme-tail: [16, 18, 20, 23, 24, 27, 28, 29, 32, 38, 39, 41, 42, 44, 46, 48, 51, 52, 55, 57] # =< 5 in test_set
- dead-tree: [13]
- invasive-alien: [54]
+ bulk: [1, 2, 3, 4, 6, 7, 8, 9, 10, 12, 14, 15, 17] # >200 in train_set
+ medium: [19, 21, 22, 25, 30, 33, 34, 36, 40, 45] # >50 & <=200 in train_set
+ tail: [16, 18, 20, 23, 24, 26, 27, 28, 29, 32, 35, 38, 39, 41, 42, 44, 46, 47, 48, 49, 51, 52, 53, 54, 55, 57] # <=50 in train_set
+ dead-tree: [13] # dead-tree (not in buld/medium/tail, as not a species)
+ invasive-alien: [54] # part of tail
  # incomplete: [31] # species which do not appear in every data split -> set to ignore class
  # order-classes: [37, 60] # order -> set to ignore class (better: use hierachical segmentation?)
  # genus_classes: [5, 11, 43, 50, 56, 58, 59, 61] # genus -> set to ignore class (better: use hierachical segmentation?)

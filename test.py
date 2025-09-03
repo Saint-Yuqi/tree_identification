@@ -29,7 +29,8 @@ def main(cfg: DictConfig) -> None:
     # # get device, set matplotlib style
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     matplotlib.rcParams.update(cfg.matplotlib_style)
-    
+    matplotlib.use(cfg.matplotlib_backend)
+
     # # set pytorch lightning seed
     if cfg.pl_seed:
         seed_everything(cfg.pl_seed, workers=True)
