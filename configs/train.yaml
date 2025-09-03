@@ -10,7 +10,7 @@ defaults:
 
 # # either generated automatically (new experiment) or set manually to resume training from already existing checkpoint
 # # new training -> automatically
-exp_name: ${now:%Y%m%d}_${now:%H%M%S.%f}_${model.model}_${model.encoder_name}_${data.crop_size_train}_${model.num_classes}
+exp_name: ${now:%Y%m%d}_${now:%H%M%S.%f}_${model.model}_${model.encoder_name}_${data.crop_size_train}_${model.num_classes}_wrs_${data.weightedSampling}
 # # resume training -> put manually exp_name in log_dir
 # exp_name: 20250902_222459.947460_Unet_resnet50_320_62
 
