@@ -1,0 +1,49 @@
+defaults:
+  - _self_
+  - data: data
+  - model: model
+  # # Only change Overrides (only one override per group (data/model/...) allowed)
+  # # Command line override would look like: python train.py data=splitXY model=modelZ
+  - override /data: treeAI
+  - override /model: model_treeAI
+  - override hydra/launcher: submitit_slurm
+
+# # either generated automatically (new experiment) or set manually to resume training from already existing checkpoint
+# # new training -> automatically
+# exp_name: ${now:%Y%m%d}_${now:%H%M%S.%f}_${model.model}_${model.encoder_name}_${data.crop_size_train}_${model.num_classes}
+# # resume training -> put manually exp_name in log_dir
+exp_name: 20250902_222459.947460_Unet_resnet50_320_62
+
+# # Reproducibility: pytorch lightning seed and deteministic train
+pl_seed: 42 # False or seed number, e.g., 42
+deterministic_train: False # bool
+    
+# # set wandb log name
+log_name: 'treeAI'
+
+log_dir: lightning_logs
+log_path: ${log_dir}/${exp_name}
+ckpt_path: ${log_path}/checkpoints
+
+matplotlib_style:
+  text.usetex: true
+  font.family: serif
+  pgf.texsystem: pdflatex
+  pgf.rcfonts: false
+
+hydra:
+  job:
+    name: train_treeAI_semseg
+  launcher:
+    timeout_min: 1440 # 1440 2880 4320 5760 ... whatever
+    gres: gpu:1
+    partition: wegner
+    constraint: "GPUMEM32GB|GPUMEM80GB"
+    mem_gb: 64
+    cpus_per_task: 8
+
+  sweep:
+    dir: ${log_path}/hydra/multirun/${now:%Y-%m-%d-%H-%M-%S}
+    subdir: ${hydra.job.num}
+  run:
+    dir: ${log_path}/hydra/${now:%Y-%m-%d-%H-%M-%S}

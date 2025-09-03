@@ -1,0 +1,74 @@
+classes:
+  0: { name: "Background", color: "#000000" }
+  1: { name: "betula papyrifera", color: "#e6194b" }
+  2: { name: "tsuga canadensis", color: "#3cb44b" }
+  3: { name: "picea abies", color: "#ffe119" }
+  4: { name: "acer saccharum", color: "#4363d8" }
+  5: { name: "betula sp.", color: "#f58231" }
+  6: { name: "pinus sylvestris", color: "#911eb4" }
+  7: { name: "picea rubens", color: "#46f0f0" }
+  8: { name: "betula alleghaniensis", color: "#f032e6" }
+  9: { name: "larix decidua", color: "#bcf60c" }
+  10: { name: "fagus grandifolia", color: "#fabebe" }
+  11: { name: "picea sp.", color: "#008080" }
+  12: { name: "fagus sylvatica", color: "#e6beff" }
+  13: { name: "dead tree", color: "#9a6324" }
+  14: { name: "acer pensylvanicum", color: "#fffac8" }
+  15: { name: "populus balsamifera", color: "#800000" }
+  16: { name: "quercus ilex", color: "#aaffc3" }
+  17: { name: "quercus robur", color: "#808000" }
+  18: { name: "pinus strobus", color: "#ffd8b1" }
+  19: { name: "larix laricina", color: "#000075" }
+  20: { name: "larix gmelinii", color: "#808080" }
+  21: { name: "pinus pinea", color: "#de3ebb" }
+  22: { name: "populus grandidentata", color: "#a9a9a9" }
+  23: { name: "pinus montezumae", color: "#ff4500" }
+  24: { name: "abies alba", color: "#2e8b57" }
+  25: { name: "betula pendula", color: "#6a5acd" }
+  26: { name: "pseudotsuga menziesii", color: "#00ced1" }
+  27: { name: "fraxinus nigra", color: "#dc143c" }
+  28: { name: "dacrydium cupressinum", color: "#ff1493" }
+  29: { name: "cedrus libani", color: "#adff2f" }
+  30: { name: "acer pseudoplatanus", color: "#8b0000" }
+  31: { name: "pinus elliottii", color: "#00ff7f" }
+  32: { name: "cryptomeria japonica", color: "#1e90ff" }
+  33: { name: "pinus koraiensis", color: "#da70d6" }
+  34: { name: "abies holophylla", color: "#ff69b4" }
+  35: { name: "alnus glutinosa", color: "#6495ed" }
+  36: { name: "fraxinus excelsior", color: "#5f9ea0" }
+  37: { name: "coniferous", color: "#7fffd4" }
+  38: { name: "eucalyptus globulus", color: "#deb887" }
+  39: { name: "pinus nigra", color: "#7b68ee" }
+  40: { name: "quercus rubra", color: "#d2691e" }
+  41: { name: "tilia europaea", color: "#cd5c5c" }
+  42: { name: "abies firma", color: "#4b0082" }
+  43: { name: "acer sp.", color: "#ba55d3" }
+  44: { name: "metrosideros umbellata", color: "#00fa9a" }
+  45: { name: "acer rubrum", color: "#dda0dd" }
+  46: { name: "picea mariana", color: "#ffb6c1" }
+  47: { name: "abies balsamea", color: "#ff6347" }
+  48: { name: "castanea sativa", color: "#2f4f4f" }
+  49: { name: "tilia cordata", color: "#ffdead" }
+  50: { name: "populus sp.", color: "#b0e0e6" }
+  51: { name: "crataegus monogyna", color: "#add8e6" }
+  52: { name: "quercus petraea", color: "#90ee90" }
+  53: { name: "acer platanoides", color: "#d3d3d3" }
+  54: { name: "robinia pseudoacacia", color: "#ffdab9" }
+  55: { name: "fagus crenata", color: "#b22222" }
+  56: { name: "quercus sp.", color: "#d2b48c" }
+  57: { name: "salix alba", color: "#00bfff" }
+  58: { name: "pinus sp.", color: "#eee8aa" }
+  59: { name: "carpinus sp.", color: "#8fbc8f" }
+  60: { name: "deciduous", color: "#f0e68c" }
+  61: { name: "salix sp.", color: "#f5deb3" }
+
+class_groups:
+ bulk: [1, 2, 3, 4, 6, 7, 8, 9, 10, 12, 14, 15, 17] # >200 in train_set & not in extreme-tail
+ medium: [19, 21, 22, 25, 30, 33, 34, 36, 40, 45] # >50 & <=200 in train_set & not in extreme-tail
+ tail: [26, 35, 47, 49, 53] # <=50 in train_set & not in extreme-tail
+ extreme-tail: [16, 18, 20, 23, 24, 27, 28, 29, 32, 38, 39, 41, 42, 44, 46, 48, 51, 52, 55, 57] # =< 5 in test_set
+ dead-tree: [13]
+ invasive-alien: [54]
+ # incomplete: [31] # species which do not appear in every data split -> set to ignore class
+ # order-classes: [37, 60] # order -> set to ignore class (better: use hierachical segmentation?)
+ # genus_classes: [5, 11, 43, 50, 56, 58, 59, 61] # genus -> set to ignore class (better: use hierachical segmentation?)

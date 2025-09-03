@@ -1,0 +1,36 @@
+# # value_mapping: dict (old_value: new value)
+# #   - homogenize class_values from different datasets
+# #   - set specific classes to ignore_index or background (simplifications, unsure classes, background in partially labeled images)
+# # dataset names (keys of outer dict) need to be a folder in each image path (since the name is automatically extracted)
+# # There can be multiple value mappings for one path, e.g. the general TreeAI dataset is subdivided into 12_RGB_SemSegm_640_fL and 34_RGB_SemSegm_640_pL subsets. Whenever more >1 value_mappings exists, the value mapping of the subset is preferred over the mapping of the general dataset (12_RGB_SemSegm_640_fL > TreeAI)
+
+value_mapping:
+  # TreeAI: null # interpreted as None -> no mapping applied
+  12_RGB_SemSegm_640_fL:
+    31: ${data.ignore_index} # no/not enough data
+    37: ${data.ignore_index} # order
+    60: ${data.ignore_index} # order
+    5: ${data.ignore_index} # genus
+    11: ${data.ignore_index} # genus 
+    43: ${data.ignore_index} # genus
+    50: ${data.ignore_index} # genus
+    56: ${data.ignore_index} # genus
+    58: ${data.ignore_index} # genus
+    59: ${data.ignore_index} # genus
+    61: ${data.ignore_index} # genus
+  34_RGB_SemSegm_640_pL:
+    0: ${data.ignore_index}
+    31: ${data.ignore_index} # no/not enough data
+    37: ${data.ignore_index} # order
+    60: ${data.ignore_index} # order
+    5: ${data.ignore_index} # genus
+    11: ${data.ignore_index} # genus 
+    43: ${data.ignore_index} # genus
+    50: ${data.ignore_index} # genus
+    56: ${data.ignore_index} # genus
+    58: ${data.ignore_index} # genus
+    59: ${data.ignore_index} # genus
+    61: ${data.ignore_index} # genus
+
+# # Pixel value of pixels to be ignored during loss computation and evaluation 
+ignore_index: -1

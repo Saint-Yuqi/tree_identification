@@ -1,0 +1,10 @@
+defaults:
+  - model
+
+model: Unet # implemented: Unet, Unet++ DeepLabV3+; find list of available models here: https://smp.readthedocs.io/en/latest/models.html 
+encoder_name: resnet50 # attention: not all encoders are compatible with each model; find list of encoders here: https://smp.readthedocs.io/en/latest/encoders_timm.html; add "tu-" for timm encoders: swin_base_patch4_window7_224 -> tu-swin_base_patch4_window7_224
+patch_2_img_size: False # set True for Transformer architectures, where img_size during val/test/inference must match img_size during training (due to fixed pos embedding) [patch_2_img_size: True]; CNN models allow different input img_size during inference so both is possible, but False is recommended (less edge-effects) [patch_2_img_size: True/False]
+max_epochs: 500
+lr: 0.0001
+loss: CE # CE, Focal, GaussianNLL
+weight: null # default: null, for 7 classes e.g.: [0.001, 0.10, 0.18, 0.06, 0.10, 0.16, 0.39]; # need to have same length as num_classes# weight: [0.001, 0.10, 0.18, 0.06, 0.10, 0.16, 0.39 ....] # same length as num_classes

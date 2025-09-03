@@ -1,0 +1,85 @@
+defaults:
+  - data
+  - treeAI_classes
+
+weightedSampling: True
+batch_size: 8
+num_workers: 8
+
+image_dir:
+  train:
+    - '../data/TreeAI/12_RGB_SemSegm_640_fL/train'
+    - '../data/TreeAI/34_RGB_SemSegm_640_pL/train'
+  val:
+    - '../data/TreeAI/12_RGB_SemSegm_640_fL/val'
+    - '../data/TreeAI/34_RGB_SemSegm_640_pL/val'
+  test:
+    - '../data/TreeAI/12_RGB_SemSegm_640_fL/test'
+    - '../data/TreeAI/34_RGB_SemSegm_640_pL/test'
+  pick:
+    - '../data/TreeAI/12_RGB_SemSegm_640_fL/pick'
+    - '../data/TreeAI/34_RGB_SemSegm_640_pL/pick'
+
+crop_size_train: 320
+crop_size_train_tuple:
+  - ${data.crop_size_train}
+  - ${data.crop_size_train}
+crop_size_val: 640 # For CNN models, no resize/crop is needed for val/test (you want to evaluate the full resolution images). For Transformer models, which require a specific input size, the size should be set as close as possible to the original resolution (with model/patch_2_img_size: True)
+crop_size_test: 640
+interpolation: 2 # 0: cv2.INTER_NEAREST, 1: cv2.INTER_LINEAR, 2: cv2.INTER_CUBIC, 3: cv2.INTER_AREA, 4: cv2.INTER_LANCZOS4
+norm_mean: [0.485, 0.456, 0.406]
+norm_std: [0.229, 0.224, 0.225]
+
+train_transforms:
+  - type: RandomResizedCrop
+    params:
+      p: 1.0
+      size: ${data.crop_size_train_tuple}
+      scale: [0.20, 0.30] 
+      ratio: [0.95, 1.05] # a bit more limited compared to default value
+      interpolation: ${data.interpolation} 
+  - type: ColorJitter
+    params:
+      p: 0.5
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.2
+  - type: CLAHE
+    params:
+      p: 0.5
+      clip_limit: 4
+  - type: RandomRotate90
+    params:
+      p: 1.0
+  - type: HorizontalFlip
+    params:
+      p: 0.5
+  - type: Normalize
+    params:
+      mean: ${data.norm_mean}
+      std: ${data.norm_std}
+      
+val_transforms:
+  - type: Resize
+    params:
+      p: 1.0
+      height: ${data.crop_size_val}
+      width: ${data.crop_size_val}
+      interpolation: ${data.interpolation}
+  - type: Normalize
+    params:
+      mean: ${data.norm_mean}
+      std: ${data.norm_std}
+
+test_transforms:
+  - type: Resize
+    params:
+      p: 1.0
+      height: ${data.crop_size_test}
+      width: ${data.crop_size_test}
+      interpolation: ${data.interpolation}
+  - type: Normalize
+    params:
+      mean: ${data.norm_mean}
+      std: ${data.norm_std}

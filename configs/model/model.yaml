@@ -1,0 +1,29 @@
+num_classes: 62 # incl. background
+img_size: ${data.crop_size_train}
+optimizer: AdamW
+
+# # LR Scheduler & Callbacks
+lr_scheduler:
+  type: CosineAnnealingLR
+  params:
+    T_max: ${model.max_epochs}  # Number of epochs for a full cosine cycle
+    eta_min: 1e-6  # minimum learning rate
+callbacks:
+  - type: LearningRateMonitor
+    params:
+      log_momentum: False
+  - type: EarlyStopping
+    params:
+      monitor: val_f1
+      min_delta: 0.001
+      patience: 100
+      mode: max
+      verbose: True
+  - type: ModelCheckpoint
+    params:
+      monitor: val_f1
+      mode: max
+      save_last: True
+      save_top_k: 1
+      dirpath: ${ckpt_path}
+      filename: best_{epoch}
