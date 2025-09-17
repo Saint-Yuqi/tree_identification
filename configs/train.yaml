@@ -4,9 +4,9 @@ defaults:
   - model: model
   # # Only change Overrides (only one override per group (data/model/...) allowed)
   # # Command line override would look like: python train.py data=splitXY model=modelZ
-  - override /data: treeAI
+  - override /data: treeAI_vernon
   - override /model: model_treeAI
-  - override hydra/launcher: submitit_slurm
+  # - override hydra/launcher: submitit_slurm
 
 # # either generated automatically (new experiment) or set manually to resume training from already existing checkpoint
 # # new training -> automatically
@@ -35,14 +35,13 @@ matplotlib_style:
 hydra:
   job:
     name: train_treeAI_semseg
-  launcher:
-    timeout_min: 1440 # 1440 2880 4320 5760 ... whatever
-    gres: gpu:1
-    partition: wegner
-    constraint: "GPUMEM32GB|GPUMEM80GB"
-    mem_gb: 64
-    cpus_per_task: 8
-
+  # launcher:
+  #   timeout_min: 1440 # 1440 2880 4320 5760 ... whatever
+  #   gres: gpu:1
+  #   partition: wegner
+  #   constraint: "GPUMEM32GB|GPUMEM80GB"
+  #   mem_gb: 64
+  #   cpus_per_task: 8
   sweep:
     dir: ${log_path}/hydra/multirun/${now:%Y-%m-%d-%H-%M-%S}
     subdir: ${hydra.job.num}
