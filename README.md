@@ -10,7 +10,7 @@ Accurate mapping of tree species enables better decision-making for conservation
 ## 📊 Dataset
 We use the **TreeAI dataset**, a **global collection of tree species annotations and high-resolution imagery**.  
 
-- Contains **large-scale samples across diverse ecosystems**.  
+- Contains **high-resolution samples across diverse ecosystems**.  
 - Published on **Zenodo**: [TreeAI dataset](https://zenodo.org/records/15351054)
 - Further details:  
   - [EGU 2025 abstract](https://meetingorganizer.copernicus.org/EGU25/EGU25-18117.html)  
@@ -87,8 +87,7 @@ treeAI-segmentation/
 │── test.py                   # testing / evaluation
 │── configs/                  # hydra configuration files
 │── models/                   # model definitions
-│── data/                     # dataset loading & preprocessing
+│── datasets/                 # dataset loading & preprocessing
 │── utils/                    # helper functions
-│── README.md                 # this file
 ```
 
