@@ -65,6 +65,13 @@ python train.py data=data_treeAI_vernon model=model_UNet_resnet18
 
 ## 📂 Project Structure
 ```
+treeAI-segmentation/
+│── train.py                  # training script
+│── test.py                   # testing / evaluation
+│── configs/                  # hydra configuration files
+│── models/                   # model definitions
+│── datasets/                 # dataset loading & preprocessing
+│── utils/                    # helper functions
 data/
 │── TreeAI
 │ ├── 12_RGB_SemSegm_640_fl
@@ -82,12 +89,5 @@ data/
 │ │ │ ├── labels
 │ ├── 34_RGB_SemSegm_640_pL
 │ │ ├── ...
-treeAI-segmentation/
-│── train.py                  # training script
-│── test.py                   # testing / evaluation
-│── configs/                  # hydra configuration files
-│── models/                   # model definitions
-│── datasets/                 # dataset loading & preprocessing
-│── utils/                    # helper functions
 ```
 
