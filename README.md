@@ -1,5 +1,5 @@
-
 # 🌳 TreeAI Segmentation
+![Tree segmentation example](examples/segmentation_example.jpg)
 A deep learning pipeline for **pixel-wise tree segmentation** from aerial imagery enabling both species classification and crown delineation.
 This repository is intended as a **starting point for further developments in tree segmentation** as part of the **UZH Master's course AI4Good**.
 
