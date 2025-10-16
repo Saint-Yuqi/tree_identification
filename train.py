@@ -71,9 +71,12 @@ def main(cfg: DictConfig) -> None:
             print(f"Error at index {idx}: {e}")
     
     
-    
+    n_classes = cfg.model.num_classes
+    #cost matrix:
+    D = torch.full((n_classes, n_classes), 0.3) #should later be replaced by distance matrix
+    D.fill_diagonal_(0) #it's included in the model now!!
     #%% model
-    model = SegmentationModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler,  loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size)
+    model = SegmentationModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, d_matrix=D)
     
     
     #%% training

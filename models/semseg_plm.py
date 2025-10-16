@@ -4,14 +4,58 @@ import torch.nn.functional as F
 import torch.optim as optim
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
-
 from torchmetrics.classification import MulticlassAccuracy, MulticlassF1Score, MulticlassJaccardIndex, MulticlassAUROC
 
 from utils.scheduler_utils import get_scheduler
 
 
+class HierarchicalLoss(nn.Module):
+    def __init__(self, distance_matrix: torch.Tensor, ignore_index: int = -100, reduction: str = 'mean'):
+        """
+        distance_matrix: Tensor of shape (num_classes, num_classes) with D[i, j] = distance(i, j)
+        ignore_index: label to ignore in the loss (e.g., for unlabeled pixels)
+        reduction: 'mean', 'sum', or 'none'
+        """
+        super().__init__()
+        self.register_buffer("D", distance_matrix.float())
+        self.ignore_index = ignore_index
+        self.reduction = reduction
+    
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        """
+        logits: (B, C, H, W) class logits per pixel (B: pct. per batch, C: 62 (nr. classes), H=W=32
+        targets: (B, H, W) integer class labels: stores truth class
+
+        """
+         
+        # Flatten spatial dimensions to compute per-pixel loss
+        B, C, H, W = logits.shape
+        probs = F.softmax(logits, dim=1)  # change model outputs to probabilities mit e^.. 
+        probs_flat = probs.permute(0, 2, 3, 1).reshape(-1, C)  # (B, H, W, C) -> (N, C) N =B*H*C
+        targets_flat = targets.reshape(-1)  # 1D vector (N,)
+        
+        #get rid of invalid indices
+        valid_mask = targets_flat != self.ignore_index #should be considered in the loss (T vs. F) #for each pixel individually
+        if not torch.any(valid_mask):
+            return probs_flat.new_tensor(0.0, requires_grad=True)
+        targets_valid = targets_flat[valid_mask] #remove pixels which are not used
+        probs_valid = probs_flat[valid_mask]  # (N_valid, C)
+        
+        # calculate the loss:
+        D_y = self.D[targets_valid]  # (N_valid, C) for each pixel individual the row in D
+        losses = torch.sum(probs_valid * D_y, dim=1)  # (N_valid,), elementwise multiplication (dim 1)
+
+        if self.reduction == 'mean':
+            return losses.mean()
+        elif self.reduction == 'sum':
+            return losses.sum()
+        else:
+            return losses
+
+
+
 class SegmentationModel(pl.LightningModule):
-    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, ignore_index=-1, optimizer='AdamW', lr_scheduler=None, loss='CE', weight=None, patch_2_img_size=False):
+    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, ignore_index=-1, optimizer='AdamW', lr_scheduler=None, loss='CE', weight=None, patch_2_img_size=False, d_matrix=None):
         super().__init__()
         self.save_hyperparameters()
 
@@ -34,6 +78,17 @@ class SegmentationModel(pl.LightningModule):
             self.criterion = nn.BCEWithLogitsLoss(weight=weight, ignore_index=ignore_index)
         elif loss=='Focal':
             self.criterion = torch.hub.load('adeelh/pytorch-multi-class-focal-loss', model='FocalLoss', alpha=weight/sum(weight), gamma=2, reduction='mean', force_reload=False)
+        elif loss =='Hierarchical':
+            if d_matrix == None:
+                raise ValueError("No D_matrix")
+            # Register inside loss; it will be moved with the module automatically
+            self.criterion = HierarchicalLoss(d_matrix, ignore_index=ignore_index)
+        elif loss =='HierarchicalCE':
+            if d_matrix == None:
+                raise ValueError("No D_matrix")
+            self.criterion_ce = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index)
+            self.criterion_hier= HierarchicalLoss(d_matrix, ignore_index=ignore_index)
+            self.use_combined_loss = True    
         else:
             raise ValueError('Invalid loss function specified.')
         
@@ -75,7 +130,19 @@ class SegmentationModel(pl.LightningModule):
         images = batch['image']
         masks = batch['mask']
         logits = self._forward(images)
-        loss = self.criterion(logits, masks.long())
+
+        if getattr(self, 'use_combined_loss', False):
+            loss_ce = self.criterion_ce(logits, masks.long())
+            loss_hier = self.criterion_hier(logits, masks.long())
+            alpha, beta = 0.6, 0.4  # weights to be tuned!!!!
+            loss = alpha * loss_ce + beta * loss_hier
+            self.log(f'{stage}_loss_ce', loss_ce, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
+            self.log(f'{stage}_loss_hier', loss_hier, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
+        else:
+            loss = self.criterion(logits, masks.long())
+
+        #loss = self.criterion(logits, masks.long())
+       
         preds = torch.argmax(logits, dim=1)
         self.log(f'{stage}_loss', loss, on_step=stage=='train', on_epoch=True, prog_bar=True, batch_size=images.shape[0])
         getattr(self, f"{stage}_acc").update(preds.detach(), masks.detach())
@@ -130,11 +197,117 @@ class SegmentationModel(pl.LightningModule):
     # # Inference forward with final activations included
     def forward(self, x):
         logits = self._forward(x)
-        if self.hparams.loss in {'CE', 'Focal'}:
+        if self.hparams.loss in {'CE', 'Focal', 'Hierarchical'}:
             return torch.softmax(logits, dim=1)
         elif self.hparams.loss=='BCE':
             return torch.sigmoid(logits)
 
+#from chat:
+'''
+class SegmentationModelDistortion(SegmentationModel):
+    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, ignore_index=-1, optimizer='AdamW', lr_scheduler=None, loss='CE', weight=None, patch_2_img_size=False, embedding_dim=16, num_prototypes_per_class=2, lambda_disto=1.0, D_tensor=None, use_proto_logits=False):
+        super().__init__(model, encoder_name, img_size, num_classes, learning_rate, ignore_index=ignore_index, optimizer=optimizer, lr_scheduler=lr_scheduler, loss=loss, weight=weight, patch_2_img_size=patch_2_img_size)
+        # Per-pixel embedding head on top of logits (1x1 conv maps class-logits to embedding space)
+        self.embedding_dim = embedding_dim
+        self.use_proto_logits = use_proto_logits
+        self.emb_head = nn.Conv2d(num_classes, embedding_dim, kernel_size=1, bias=False)
+        # Prototypes: either internal tensor [C, K, E] or external LearntPrototypes (one per class)
+        self.num_prototypes_per_class = num_prototypes_per_class
+        self.prototypes = nn.Parameter(torch.randn(num_classes, num_prototypes_per_class, embedding_dim) * 0.01)
+        self.lp = None
+        if self.use_proto_logits and TP_LearntPrototypes is not None and num_prototypes_per_class == 1:
+            # Use torch_prototypes LearntPrototypes with one prototype per class
+            # We pass embeddings directly via an Identity backbone
+            self.lp = TP_LearntPrototypes(model=nn.Identity(), n_prototypes=num_classes, embedding_dim=embedding_dim, prototypes=None, device='cpu')
+        # Distortion guidance weight
+        self.lambda_disto = float(lambda_disto)
+        if D_tensor is not None:
+            self.register_buffer('D_metric', D_tensor)
+        else:
+            self.register_buffer('D_metric', None)
+
+    def _compute_embeddings(self, x):
+        # Get model logits then map to embedding space
+        logits = super()._forward(x)
+        embeddings = self.emb_head(logits)
+        return logits, embeddings
+
+    @staticmethod
+    def _pairwise_class_distances(centroids):
+        # centroids: [C, E] -> pairwise squared Euclidean distances [C, C]
+        c2 = (centroids ** 2).sum(dim=1, keepdim=True)  # [C,1]
+        dist2 = c2 + c2.t() - 2.0 * centroids @ centroids.t()
+        dist2 = torch.clamp(dist2, min=0.0)
+        return torch.sqrt(dist2 + 1e-12)
+
+    def _distortion_loss(self):
+        if self.D_metric is None:
+            return None
+        # Use class centroids (mean over prototypes)
+        centroids = self.prototypes.mean(dim=1)  # [C, E]
+        D_pred = self._pairwise_class_distances(centroids)  # [C, C]
+        # Normalize both to comparable scales
+        D_target = self.D_metric.to(D_pred.dtype)
+        # Ensure shapes match number of classes
+        C = centroids.shape[0]
+        if D_target.shape[0] != C or D_target.shape[1] != C:
+            # If mismatch, try to slice or return None
+            if D_target.shape[0] >= C and D_target.shape[1] >= C:
+                D_target = D_target[:C, :C]
+            else:
+                return None
+        # Scale-invariant MSE by dividing each matrix by its mean (avoid degenerate zeros)
+        mean_pred = torch.clamp(D_pred.mean(), min=1e-6)
+        mean_tgt = torch.clamp(D_target.mean(), min=1e-6)
+        D_pred_n = D_pred / mean_pred
+        D_tgt_n = D_target / mean_tgt
+        return F.mse_loss(D_pred_n, D_tgt_n)
+
+    def _proto_class_logits(self, embeddings):
+        # embeddings: [B, E, H, W]
+        if self.lp is not None:
+            # Use torch_prototypes: returns -dists of shape [B, C, H, W] when n_prototypes==num_classes
+            return self.lp(embeddings)
+        B, E, H, W = embeddings.shape
+        C = self.prototypes.shape[0]
+        K = self.prototypes.shape[1]
+        # Flatten spatial
+        emb_flat = embeddings.permute(0, 2, 3, 1).reshape(-1, E)  # [B*H*W, E]
+        protos = self.prototypes.reshape(C * K, E)  # [C*K, E]
+        # Compute squared distances: ||e - p||^2 = e^2 + p^2 - 2 e.p
+        e2 = (emb_flat ** 2).sum(dim=1, keepdim=True)  # [N,1]
+        p2 = (protos ** 2).sum(dim=1).unsqueeze(0)     # [1, C*K]
+        dist2 = e2 + p2 - 2.0 * emb_flat @ protos.t()  # [N, C*K]
+        dist2 = torch.clamp(dist2, min=0.0)
+        # Reshape and aggregate per class
+        dist2 = dist2.view(B * H * W, C, K)            # [N, C, K]
+        # Use min distance to class prototypes; logits as negative distance
+        min_dist2, _ = dist2.min(dim=2)                # [N, C]
+        logits = (-min_dist2).view(B, H, W, C).permute(0, 3, 1, 2).contiguous()  # [B, C, H, W]
+        return logits
+
+    def _step(self, batch, stage):
+        images = batch['image']
+        masks = batch['mask']
+        base_logits, embeddings = self._compute_embeddings(images)
+        if self.use_proto_logits:
+            logits = self._proto_class_logits(embeddings)
+        else:
+            logits = base_logits
+        loss_ce = self.criterion(logits, masks.long())
+        loss = loss_ce
+        loss_disto = self._distortion_loss()
+        if loss_disto is not None and self.lambda_disto > 0:
+            loss = loss + self.lambda_disto * loss_disto
+            self.log(f'{stage}_loss_disto', loss_disto, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
+        preds = torch.argmax(logits, dim=1)
+        self.log(f'{stage}_loss', loss, on_step=stage=='train', on_epoch=True, prog_bar=True, batch_size=images.shape[0])
+        getattr(self, f"{stage}_acc").update(preds.detach(), masks.detach())
+        getattr(self, f"{stage}_iou").update(preds.detach(), masks.detach())
+        getattr(self, f"{stage}_f1").update(preds.detach(), masks.detach())
+        getattr(self, f"{stage}_auc").update(logits.detach(), masks.detach().long())
+        return loss
+'''
 
 def patch_image_to_batch(image, patch_size):
     # # x shape: [batch_size, channels, height, width]
