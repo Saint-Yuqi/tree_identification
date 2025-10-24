@@ -13,7 +13,7 @@ from omegaconf import DictConfig, OmegaConf
 from collections import Counter
 
 from datasets.semseg_datamodule import SegmentationDataModule
-from models.semseg_plm import SegmentationModel
+from models.semseg_plm import SegmentationModel, ProtoSegModel
 from utils.utils import make_dir, shrink_dict
 from utils.eval_utils import evaluate_model, evaluate_model_samplewise, visualize_results, visualize_save_confusions, visualize_scores_per_class
 from utils.transform_utils import get_transforms
@@ -73,11 +73,20 @@ def main(cfg: DictConfig) -> None:
     
     n_classes = cfg.model.num_classes
     #cost matrix:
-    D = torch.full((n_classes, n_classes), 0.3) #should later be replaced by distance matrix
-    D.fill_diagonal_(0) #it's included in the model now!!
+    D_path = "distancematrix/phylogenetic_distance_matrix.pt"
+    D = torch.load(D_path)
+    #D = torch.full((n_classes, n_classes), 0.3) #should later be replaced by distance matrix
+    #SD.fill_diagonal_(0) #it's included in the model now!!
     #%% model
-    model = SegmentationModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, d_matrix=D)
-    
+    #TODO: change configurationfiles if neede
+    modelchoice = cfg.model.modelchoice
+
+    if modelchoice == 'SegmentationModel':
+        model = SegmentationModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, d_matrix=D)
+    elif modelchoice == 'ProtoSegModel':
+        model = ProtoSegModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, d_matrix=D,lambda_d=0.3)
+    else:
+        raise ValueError('Model Choice invalid')
     
     #%% training
     callbacks = get_callbacks(cfg.model.callbacks)
@@ -94,7 +103,10 @@ def main(cfg: DictConfig) -> None:
     # # load model from best checkpoint if available otherwise last checkpoint is loaded automatically
     ckpt_path = trainer.checkpoint_callback.best_model_path # trainer.checkpoint_callback.last_model_path
     print('ckpt_path: ', ckpt_path)
-    model = SegmentationModel.load_from_checkpoint(ckpt_path).to(device)
+    if modelchoice == 'SegmentationModel':
+        model = SegmentationModel.load_from_checkpoint(ckpt_path).to(device)
+    elif modelchoice == 'ProtoSegModel':
+        model = ProtoSegModel.load_from_checkpoint(ckpt_path).to(device)
     model.eval()
     trainer.test(model=model, dataloaders=dataModule)
     wandb.finish()
