@@ -10,16 +10,14 @@ from torch_prototypes.modules.prototypical_network import LearntPrototypes
 from torch_prototypes.metrics.distortion import DistortionLoss
 from losses_and_metrics.loss_functions import HierarchicalLoss, ProtoHierarchicalLoss
 from losses_and_metrics.metrics import AverageCostMetric
-
-
 from utils.scheduler_utils import get_scheduler
 
 
-
 class SegmentationModel(pl.LightningModule):
-    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, ignore_index=-1, optimizer='AdamW', lr_scheduler=None, loss='CE', weight=None, patch_2_img_size=False, d_matrix=None):
+    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, ignore_index=-1, optimizer='AdamW', lr_scheduler=None, loss='CE', weight=None, patch_2_img_size=False, d_matrix=None, d_matrix_eval=None, lossratio=3):
         super().__init__()
         self.save_hyperparameters()
+        
 
         # # Model architecture
         if model=='Unet':
@@ -48,12 +46,15 @@ class SegmentationModel(pl.LightningModule):
         elif loss =='HierarchicalCE':
             if d_matrix == None:
                 raise ValueError("No D_matrix")
+            self.lossratio=lossratio
             self.criterion_ce = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index)
             self.criterion_hier= HierarchicalLoss(d_matrix, ignore_index=ignore_index)
             self.use_combined_loss = True    
         else:
             raise ValueError('Invalid loss function specified.')
         
+        if d_matrix_eval == None:
+                raise ValueError("No evaluation D_matrix")
         # # Metrics
         for split in ["train", "val", "test"]:
             for metric in ["acc", "iou", "f1", "auc","AHC"]:
@@ -62,7 +63,7 @@ class SegmentationModel(pl.LightningModule):
                     "iou": MulticlassJaccardIndex(num_classes=num_classes, average='macro', ignore_index=ignore_index),
                     "f1": MulticlassF1Score(num_classes=num_classes, average='macro', ignore_index=ignore_index),
                     "auc": MulticlassAUROC(num_classes=num_classes, average='macro', ignore_index=ignore_index, thresholds=5),
-                    "AHC": AverageCostMetric(d_matrix, ignore_index=ignore_index),
+                    "AHC": AverageCostMetric(d_matrix_eval, ignore_index=ignore_index),
                 }[metric])
         
     def set_patch_2_img_size(self, new_patch_2_img_size):
@@ -97,8 +98,9 @@ class SegmentationModel(pl.LightningModule):
         if getattr(self, 'use_combined_loss', False):
             loss_ce = self.criterion_ce(logits, masks.long())
             loss_hier = self.criterion_hier(logits, masks.long())
-            alpha, beta = 0.6, 0.4  # weights to be tuned!!!!
-            loss = alpha * loss_ce + beta * loss_hier
+            #alpha, beta = 0.3, 1  # weights to be tuned!!!!
+            #loss = alpha * loss_ce + beta * loss_hier
+            loss = loss_ce + self.lossratio * loss_hier
             self.log(f'{stage}_loss_ce', loss_ce, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
             self.log(f'{stage}_loss_hier', loss_hier, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
         else:
@@ -171,7 +173,7 @@ class SegmentationModel(pl.LightningModule):
 
 
 class ProtoSegModel(pl.LightningModule):
-    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, loss='CE', ignore_index=-1, weight=None, optimizer='AdamW', lr_scheduler=None, patch_2_img_size=False, dist='euclidean', prototype_init=None, d_matrix = None, lambda_d = 0.1 ):
+    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, loss='CE', ignore_index=-1, weight=None, optimizer='AdamW', lr_scheduler=None, patch_2_img_size=False, dist='euclidean', prototype_init=None, d_matrix = None, d_matrix_eval=None, lambda_d = 0.1 ):
         super().__init__()
         self.save_hyperparameters()
         embedding_dim = 16
@@ -208,8 +210,9 @@ class ProtoSegModel(pl.LightningModule):
         else:
             raise ValueError("Unsupported loss type")
 
-        #TODO: 88
-        # would be great to add it here. add metric, the same must be done in segmentation model (here instanciate the class)
+        if d_matrix_eval == None:
+                raise ValueError("No evaluation D_matrix")
+                
         for split in ["train", "val", "test"]:
             for metric in ["acc", "iou", "f1", "auc", "AHC"]:
                 setattr(self, f"{split}_{metric}", {
@@ -217,7 +220,7 @@ class ProtoSegModel(pl.LightningModule):
                     "iou": MulticlassJaccardIndex(num_classes=num_classes, average='macro', ignore_index=ignore_index),
                     "f1": MulticlassF1Score(num_classes=num_classes, average='macro', ignore_index=ignore_index),
                     "auc": MulticlassAUROC(num_classes=num_classes, average='macro', ignore_index=ignore_index, thresholds=5),
-                    "AHC": AverageCostMetric(d_matrix,ignore_index=ignore_index),
+                    "AHC": AverageCostMetric(d_matrix_eval,ignore_index=ignore_index),
                 }[metric])
 
     def set_patch_2_img_size(self, new_patch_2_img_size):
