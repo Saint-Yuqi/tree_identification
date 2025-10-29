@@ -19,7 +19,8 @@ pl_seed: 42 # False or seed number, e.g., 42
 deterministic_train: False # bool
     
 # # set wandb log name
-log_name: 'treeAI'
+log_name: 'CB_Loss'
+entity: 'stefaniehurschler-uzh'
 
 log_dir: lightning_logs
 log_path: ${log_dir}/${exp_name}

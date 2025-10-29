@@ -6,5 +6,9 @@ encoder_name: resnet50 # attention: not all encoders are compatible with each mo
 patch_2_img_size: False # set True for Transformer architectures, where img_size during val/test/inference must match img_size during training (due to fixed pos embedding) [patch_2_img_size: True]; CNN models allow different input img_size during inference so both is possible, but False is recommended (less edge-effects) [patch_2_img_size: True/False]
 max_epochs: 500
 lr: 0.0001
-loss: CE # CE, Focal, GaussianNLL
+loss: CBFocal # CE, Focal, CBFocal, GaussianNLL
+focal_gamma: 2.0 # focusing parameter for focal/CBFocal
+cb_beta: 0.999 # effective number beta for CBFocal (0.9/0.99/0.999 common)
+cb_alpha_normalize: true # normalize CB alphas to sum to 1
+ignore_background: True # if true, treat background (class 0) as ignore_index for loss/metrics
 weight: null # default: null, for 7 classes e.g.: [0.001, 0.10, 0.18, 0.06, 0.10, 0.16, 0.39]; # need to have same length as num_classes# weight: [0.001, 0.10, 0.18, 0.06, 0.10, 0.16, 0.39 ....] # same length as num_classes

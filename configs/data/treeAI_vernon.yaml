@@ -8,17 +8,17 @@ num_workers: 8
 
 image_dir:
   train:
-    - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/train'
-    - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/train'
+    - '/home/c/yirzha/data/TreeAI/12_RGB_SemSegm_640_fL/train'
+    - '/home/c/yirzha/data/TreeAI/34_RGB_SemSegm_640_pL/train'
   val:
-    - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/val'
-    - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/val'
+    - '/home/c/yirzha/data/TreeAI/12_RGB_SemSegm_640_fL/val'
+    - '/home/c/yirzha/data/TreeAI/34_RGB_SemSegm_640_pL/val'
   test:
-    - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/test'
-    - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/test'
+    - '/home/c/yirzha/data/TreeAI/12_RGB_SemSegm_640_fL/test'
+    - '/home/c/yirzha/data/TreeAI/34_RGB_SemSegm_640_pL/test'
   pick:
-    - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/pick'
-    - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/pick'
+    - '/home/c/yirzha/data/TreeAI/12_RGB_SemSegm_640_fL/pick'
+    - '/home/c/yirzha/data/TreeAI/34_RGB_SemSegm_640_pL/pick'
 
 crop_size_train: 320
 crop_size_train_tuple:

@@ -3,15 +3,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import pytorch_lightning as pl
+from typing import Optional
 import segmentation_models_pytorch as smp
 
 from torchmetrics.classification import MulticlassAccuracy, MulticlassF1Score, MulticlassJaccardIndex, MulticlassAUROC
 
 from utils.scheduler_utils import get_scheduler
+from models.losses import FocalLossMultiClass, CBFocalLoss
 
 
 class SegmentationModel(pl.LightningModule):
-    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, ignore_index=-1, optimizer='AdamW', lr_scheduler=None, loss='CE', weight=None, patch_2_img_size=False):
+    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, ignore_index=-1, optimizer='AdamW', lr_scheduler=None, loss='CE', weight=None, patch_2_img_size=False, focal_gamma: float = 2.0, cb_alpha: Optional[torch.Tensor] = None):
         super().__init__()
         self.save_hyperparameters()
 
@@ -28,12 +30,20 @@ class SegmentationModel(pl.LightningModule):
         # # Loss function
         if weight:
             weight = torch.tensor(weight)
-        if loss=='CE':
+        if loss == 'CE':
             self.criterion = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index)
-        elif loss=='BCE':
-            self.criterion = nn.BCEWithLogitsLoss(weight=weight, ignore_index=ignore_index)
-        elif loss=='Focal':
-            self.criterion = torch.hub.load('adeelh/pytorch-multi-class-focal-loss', model='FocalLoss', alpha=weight/sum(weight), gamma=2, reduction='mean', force_reload=False)
+        elif loss == 'BCE':
+            # Note: BCEWithLogitsLoss does not support ignore_index; left as-is for compatibility.
+            self.criterion = nn.BCEWithLogitsLoss(weight=weight)
+        elif loss == 'Focal':
+            alpha = None
+            if weight is not None:
+                alpha = weight / weight.sum()
+            self.criterion = FocalLossMultiClass(alpha=alpha, gamma=focal_gamma, ignore_index=ignore_index, reduction='mean')
+        elif loss == 'CBFocal':
+            if cb_alpha is None:
+                raise ValueError("CBFocal selected but cb_alpha not provided.")
+            self.criterion = CBFocalLoss(effective_alphas=cb_alpha, gamma=focal_gamma, ignore_index=ignore_index, reduction='mean')
         else:
             raise ValueError('Invalid loss function specified.')
         
@@ -75,13 +85,23 @@ class SegmentationModel(pl.LightningModule):
         images = batch['image']
         masks = batch['mask']
         logits = self._forward(images)
-        loss = self.criterion(logits, masks.long())
+        # Sanitize targets when using background as ignore_index (0)
+        targets = masks.long()
+        if self.hparams.ignore_index == 0:
+            targets = targets.clone()
+            # Map any negative labels (e.g., -1) to background (0)
+            targets[targets < 0] = 0
+            # Guard against out-of-range labels by mapping to background
+            if hasattr(self.hparams, 'num_classes'):
+                targets[targets >= self.hparams.num_classes] = 0
+
+        loss = self.criterion(logits, targets)
         preds = torch.argmax(logits, dim=1)
         self.log(f'{stage}_loss', loss, on_step=stage=='train', on_epoch=True, prog_bar=True, batch_size=images.shape[0])
-        getattr(self, f"{stage}_acc").update(preds.detach(), masks.detach())
-        getattr(self, f"{stage}_iou").update(preds.detach(), masks.detach())
-        getattr(self, f"{stage}_f1").update(preds.detach(), masks.detach())
-        getattr(self, f"{stage}_auc").update(logits.detach(), masks.detach().long())
+        getattr(self, f"{stage}_acc").update(preds.detach(), targets.detach())
+        getattr(self, f"{stage}_iou").update(preds.detach(), targets.detach())
+        getattr(self, f"{stage}_f1").update(preds.detach(), targets.detach())
+        getattr(self, f"{stage}_auc").update(logits.detach(), targets.detach().long())
         return loss
     
     def _epoch_end(self, stage):
@@ -130,7 +150,7 @@ class SegmentationModel(pl.LightningModule):
     # # Inference forward with final activations included
     def forward(self, x):
         logits = self._forward(x)
-        if self.hparams.loss in {'CE', 'Focal'}:
+        if self.hparams.loss in {'CE', 'Focal', 'CBFocal'}:
             return torch.softmax(logits, dim=1)
         elif self.hparams.loss=='BCE':
             return torch.sigmoid(logits)

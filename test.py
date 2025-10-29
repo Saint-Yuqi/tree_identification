@@ -56,10 +56,59 @@ def main(cfg: DictConfig) -> None:
     
     
     #%% testing
-    # # load model with ckpt_type checkpoint
-    ckpts_paths = getListOfFiles(cfg.ckpt_path)
-    ckpts_paths.sort(key=natural_keys)
-    ckpt_path = [s for s in ckpts_paths if cfg.ckpt_type in s][-1]
+    # # resolve checkpoint to load
+    ckpt_path = None
+    # allow direct file if provided
+    if 'ckpt_file' in cfg and cfg.ckpt_file not in (None, 'null'):
+        if os.path.isfile(cfg.ckpt_file):
+            ckpt_path = cfg.ckpt_file
+        else:
+            raise FileNotFoundError(f"ckpt_file not found: {cfg.ckpt_file}")
+    
+    if ckpt_path is None:
+        # search within expected checkpoints directory
+        if os.path.isdir(cfg.ckpt_path):
+            ckpts_paths = getListOfFiles(cfg.ckpt_path)
+            ckpts_paths.sort(key=natural_keys)
+            matching = [s for s in ckpts_paths if s.endswith('.ckpt') and cfg.ckpt_type in s]
+            if not matching:
+                # fallback: any ckpt
+                matching = [s for s in ckpts_paths if s.endswith('.ckpt')]
+            if matching:
+                ckpt_path = matching[-1]
+        
+        # if still not found, search all runs under log_dir
+        if ckpt_path is None:
+            all_candidates = []
+            try:
+                runs = [os.path.join(cfg.log_dir, d) for d in os.listdir(cfg.log_dir)]
+                runs = [d for d in runs if os.path.isdir(os.path.join(d, 'checkpoints'))]
+                for run in sorted(runs, key=natural_keys):
+                    cps = getListOfFiles(os.path.join(run, 'checkpoints'))
+                    cps = [s for s in cps if s.endswith('.ckpt')]
+                    all_candidates.extend(cps)
+                # prefer ckpt_type match
+                matching = [s for s in all_candidates if cfg.ckpt_type in s]
+                if not matching:
+                    matching = all_candidates
+                if matching:
+                    ckpt_path = matching[-1]
+            except Exception:
+                pass
+    
+    if ckpt_path is None:
+        # helpful error with available runs
+        available = []
+        if os.path.isdir(cfg.log_dir):
+            for d in sorted(os.listdir(cfg.log_dir)):
+                if os.path.isdir(os.path.join(cfg.log_dir, d, 'checkpoints')):
+                    available.append(d)
+        raise FileNotFoundError(
+            f"No checkpoint found. Checked: {cfg.ckpt_path}.\n"
+            f"Available runs with checkpoints under {cfg.log_dir}: {available}.\n"
+            f"Set exp_name to one of the above, or set ckpt_file to a specific .ckpt path."
+        )
+
     ckpt_name = ckpt_path[ckpt_path.rindex('/')+1:-5]
     print('ckpt_path: ', ckpt_path)
     print('ckpt_name: ', ckpt_name)

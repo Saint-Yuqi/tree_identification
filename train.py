@@ -72,13 +72,85 @@ def main(cfg: DictConfig) -> None:
     
     
     
+    #%% compute class-balanced weights (effective numbers) if needed
+    cb_alpha = None
+    if cfg.model.loss == 'CBFocal':
+        # Derive per-class sample counts (image-level presence) from train dataset
+        train_ds = dataModule.train_dataset
+        if hasattr(train_ds, 'class_presence'):
+            class_presence = train_ds.class_presence
+        else:
+            class_presence = train_ds.calculate_class_presence()
+        # Sum presence across dataset to get counts per class
+        counts = np.zeros(cfg.model.num_classes, dtype=np.int64)
+        for presence in class_presence:
+            for cls_id, present in presence.items():
+                counts[int(cls_id)] += int(present)
+        # Compute effective alphas: (1 - beta) / (1 - beta^n_i)
+        beta = float(cfg.model.cb_beta)
+        counts = counts.astype(np.float64)
+        # Avoid beta**0 division by zero; where counts == 0, set alpha to 0
+        with np.errstate(divide='ignore', invalid='ignore'):
+            effective_nums = (1.0 - np.power(beta, counts)) / (1.0 - beta)
+        alphas = np.zeros_like(effective_nums, dtype=np.float64)
+        nonzero = effective_nums > 0
+        alphas[nonzero] = (1.0 / effective_nums[nonzero])
+        # Optional normalization
+        if bool(cfg.model.cb_alpha_normalize):
+            s = alphas.sum()
+            if s > 0:
+                alphas = alphas / s
+        cb_alpha = torch.tensor(alphas, dtype=torch.float32)
+
+    # Decide ignore_index for loss/metrics (optionally ignore background)
+    ignore_index_for_loss = 0 if getattr(cfg.model, 'ignore_background', False) else cfg.data.ignore_index
+
     #%% model
-    model = SegmentationModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler,  loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size)
+    model = SegmentationModel(
+        cfg.model.model,
+        cfg.model.encoder_name,
+        cfg.model.img_size,
+        cfg.model.num_classes,
+        cfg.model.lr,
+        ignore_index=ignore_index_for_loss,
+        optimizer=cfg.model.optimizer,
+        lr_scheduler=cfg.model.lr_scheduler,
+        loss=cfg.model.loss,
+        weight=cfg.model.weight,
+        patch_2_img_size=cfg.model.patch_2_img_size,
+        focal_gamma=cfg.model.focal_gamma,
+        cb_alpha=cb_alpha,
+    )
     
     
     #%% training
     callbacks = get_callbacks(cfg.model.callbacks)
-    logger = WandbLogger(name=cfg.exp_name,project=cfg.log_name)
+    logger = WandbLogger(name=cfg.exp_name, project=cfg.log_name, entity=cfg.entity)
+    # Log CB alpha stats and distribution plot if available
+    if cb_alpha is not None:
+        try:
+            import matplotlib.pyplot as plt
+            # Scalars
+            alpha_np = cb_alpha.detach().cpu().numpy()
+            max_w = float(alpha_np.max()) if alpha_np.size else 0.0
+            # min over non-zeros to avoid trivial zeros from empty classes
+            nz = alpha_np[alpha_np > 0]
+            min_w = float(nz.min()) if nz.size else 0.0
+            logger.experiment.log({
+                'cb_alpha_max': max_w,
+                'cb_alpha_min_nonzero': min_w,
+            })
+            # Plot distribution
+            fig, ax = plt.subplots(figsize=(10, 3))
+            ax.bar(np.arange(len(alpha_np)), alpha_np)
+            ax.set_title('CB Alpha Distribution')
+            ax.set_xlabel('Class index')
+            ax.set_ylabel('Alpha')
+            ax.grid(True, axis='y', linestyle='--', alpha=0.3)
+            logger.experiment.log({'cb_alpha_plot': wandb.Image(fig)})
+            plt.close(fig)
+        except Exception as e:
+            print(f"Warning: failed to log CB alpha stats: {e}")
     trainer = pl.Trainer(max_epochs=cfg.model.max_epochs, callbacks=callbacks, logger=logger, deterministic=cfg.deterministic_train)
     last_ckpt_path = os.path.join(cfg.log_path,'checkpoints/last.ckpt')
     ckpt_path_resume = last_ckpt_path if os.path.exists(last_ckpt_path) else None
