@@ -4,13 +4,14 @@ defaults:
   - model: model
   # # Only change Overrides (only one override per group (data/model/...) allowed)
   # # Command line override would look like: python train.py data=splitXY model=modelZ
-  - override /data: treeAI
+  - override /data: treeAI_vernon
   - override /model: model_treeAI
   - override hydra/launcher: submitit_slurm
 
 # # select exp_name and ckpt_type (best/last) for which test metrics are to be calculated
-exp_name: 20250902_222459.947460_Unet_resnet50_320_62
+exp_name: 20251026_190008.509178_Unet_resnet50_HierarchicalCE_320_62_wrs_True
 ckpt_type: best
+log_name: 'treeAI'
 
 # # Reproducibility: pytorch lightning seed
 pl_seed: 42 # False or seed number, e.g., 42

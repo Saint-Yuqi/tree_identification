@@ -5,12 +5,14 @@ import torch.multiprocessing
 import pytorch_lightning as pl
 import matplotlib
 import hydra
+import wandb
 
+from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import seed_everything
 from omegaconf import DictConfig, OmegaConf
 
 from datasets.semseg_datamodule import SegmentationDataModule
-from models.semseg_plm import SegmentationModel
+from models.semseg_plm import SegmentationModel,ProtoSegModel
 from utils.utils import make_dir, shrink_dict, getListOfFiles, natural_keys
 from utils.eval_utils import evaluate_model, evaluate_model_samplewise, visualize_results, visualize_save_confusions, visualize_scores_per_class
 from utils.transform_utils import get_transforms
@@ -67,11 +69,15 @@ def main(cfg: DictConfig) -> None:
     OmegaConf.resolve(cfg) # since test_path is dynamically set in the hydra config we need to run the interpolation again with modified ckpt_type
     # # load model with ckpt_path weights
     model = SegmentationModel.load_from_checkpoint(ckpt_path).to(device)
+    #TODO: change if needed! model = ProtoSegModel.load_from_checkpoint(ckpt_path).to(device)
     # # set_patch_2_img_size
     # model.set_patch_2_img_size(False)
     # # run test_step
-    trainer = pl.Trainer(logger=False)
+    
+    logger = WandbLogger(name=f"{cfg.exp_name}_test", project=cfg.log_name)
+    trainer = pl.Trainer(logger=logger)
     trainer.test(model=model, dataloaders=dataModule)
+    wandb.finish()
     
     # # all class names and colors in order of index
     class_names = [cfg.data.classes[i].name for i in sorted(cfg.data.classes.keys(), key=int)]
