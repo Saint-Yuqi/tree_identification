@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 import matplotlib
 import hydra
 import wandb
+import time
 
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import seed_everything
@@ -74,10 +75,11 @@ def main(cfg: DictConfig) -> None:
     # model.set_patch_2_img_size(False)
     # # run test_step
     
-    logger = WandbLogger(name=f"{cfg.exp_name}_test", project=cfg.log_name)
+    name = f"{cfg.exp_name}_test_{int(time.time())}"
+    logger = WandbLogger(name=name, project=cfg.log_name)
     trainer = pl.Trainer(logger=logger)
-    trainer.test(model=model, dataloaders=dataModule)
-    wandb.finish()
+    trainer.test(model=model, dataloaders=dataModule)   
+
     
     # # all class names and colors in order of index
     class_names = [cfg.data.classes[i].name for i in sorted(cfg.data.classes.keys(), key=int)]
@@ -95,7 +97,23 @@ def main(cfg: DictConfig) -> None:
     visualize_save_confusions(metrics['conf'],metrics_dir_top_1,display_labels=class_names)
     print(f"Avg class-wise F1 scores - Top1Acc:  {np.array2string(metrics['semseg']['F1'], formatter={'float_kind': lambda x: f'{x:.3f}'})}")
     
-    
+
+    # get metrics per class to WandB
+    columns = ["model_name", "class_name", "F1", "IoU", "Precision", "Recall"]
+    metrics_table = wandb.Table(columns=columns)
+
+    for idx, class_name in enumerate(class_names):
+        metrics_table.add_data(
+            cfg.exp_name,                    # model/run name
+            class_name,
+            metrics['semseg']['F1'][idx],
+            metrics['semseg']['IoU'][idx],
+            metrics['semseg']['Precision'][idx],
+            metrics['semseg']['Recall'][idx]
+        )
+    wandb.log({"per_class_metrics": metrics_table})
+
+
     #%% sample-wise evaluation and qualitative visualization (pick-data)
     pick_loader = dataModule.pick_dataloader()
     qual_dir = make_dir(cfg.test_path,'qualitative')
