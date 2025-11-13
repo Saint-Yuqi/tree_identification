@@ -10,9 +10,17 @@ image_dir:
   train:
     - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/train'
     - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/train'
+    #- '/zfs/ai4good/student/shursc/treeAI/0_RGB_fL_processed/train' #! change path to your local folder
+    #- '/zfs/ai4good/student/shursc/treeAI/5_RGB_S_320_pL/train'
+    #- '/zfs/ai4good/student/shursc/treeAI/12_RGB_ObjDet_640_fL/train'
+    #- '/zfs/ai4good/student/shursc/treeAI/34_RGB_ObjDet_640_pL_a/train'
+    #- '/zfs/ai4good/student/shursc/treeAI/34_RGB_ObjDet_640_pL_b/train'
+
+
   val:
     - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/val'
     - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/val'
+
   test:
     - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/test'
     - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/test'

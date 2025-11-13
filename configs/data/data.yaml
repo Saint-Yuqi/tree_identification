@@ -7,6 +7,7 @@
 value_mapping:
   # TreeAI: null # interpreted as None -> no mapping applied
   12_RGB_SemSegm_640_fL:
+    #0: ${data.ignore_index}
     31: ${data.ignore_index} # no/not enough data
     37: ${data.ignore_index} # order
     60: ${data.ignore_index} # order
@@ -19,7 +20,7 @@ value_mapping:
     59: ${data.ignore_index} # genus
     61: ${data.ignore_index} # genus
   34_RGB_SemSegm_640_pL:
-    0: ${data.ignore_index}
+    0: ${data.ignore_index} # background: !and! all data which is not labeled as anything else (also trees!)
     31: ${data.ignore_index} # no/not enough data
     37: ${data.ignore_index} # order
     60: ${data.ignore_index} # order
@@ -31,6 +32,80 @@ value_mapping:
     58: ${data.ignore_index} # genus
     59: ${data.ignore_index} # genus
     61: ${data.ignore_index} # genus
+
+  0_RGB_fL_processed:
+    0: ${data.ignore_index} #this is not a fL dataset!!!
+    37: ${data.ignore_index} # order
+    60: ${data.ignore_index} # order
+    5: ${data.ignore_index} # genus
+    11: ${data.ignore_index} # genus 
+    43: ${data.ignore_index} # genus
+    50: ${data.ignore_index} # genus
+    56: ${data.ignore_index} # genus
+    58: ${data.ignore_index} # genus
+    59: ${data.ignore_index} # genus
+    61: ${data.ignore_index} # genus
+    65535: ${data.ignore_index} # background
+
+  5_RGB_S_320_pL:
+    0: ${data.ignore_index} #background
+    37: ${data.ignore_index} # order
+    60: ${data.ignore_index} # order
+    5: ${data.ignore_index} # genus
+    11: ${data.ignore_index} # genus 
+    43: ${data.ignore_index} # genus
+    50: ${data.ignore_index} # genus
+    56: ${data.ignore_index} # genus
+    58: ${data.ignore_index} # genus
+    59: ${data.ignore_index} # genus
+    61: ${data.ignore_index} # genus
+    65535: ${data.ignore_index} # background
+
+  12_RGB_ObjDet_640_fL:
+    0: ${data.ignore_index}
+    37: ${data.ignore_index} # order
+    60: ${data.ignore_index} # order
+    5: ${data.ignore_index} # genus
+    11: ${data.ignore_index} # genus 
+    43: ${data.ignore_index} # genus
+    50: ${data.ignore_index} # genus
+    56: ${data.ignore_index} # genus
+    58: ${data.ignore_index} # genus
+    59: ${data.ignore_index} # genus
+    61: ${data.ignore_index} # genus
+    65535: ${data.ignore_index} # background
+
+
+  34_RGB_ObjDet_640_pL_a:
+    0: ${data.ignore_index} #background
+    37: ${data.ignore_index} # order
+    60: ${data.ignore_index} # order
+    5: ${data.ignore_index} # genus
+    11: ${data.ignore_index} # genus 
+    43: ${data.ignore_index} # genus
+    50: ${data.ignore_index} # genus
+    56: ${data.ignore_index} # genus
+    58: ${data.ignore_index} # genus
+    59: ${data.ignore_index} # genus
+    61: ${data.ignore_index} # genus
+    65535: ${data.ignore_index} # background
+  
+  34_RGB_ObjDet_640_pL_b:
+    0: ${data.ignore_index} #background
+    37: ${data.ignore_index} # order
+    60: ${data.ignore_index} # order
+    5: ${data.ignore_index} # genus
+    11: ${data.ignore_index} # genus 
+    43: ${data.ignore_index} # genus
+    50: ${data.ignore_index} # genus
+    56: ${data.ignore_index} # genus
+    58: ${data.ignore_index} # genus
+    59: ${data.ignore_index} # genus
+    61: ${data.ignore_index} # genus
+    65535: ${data.ignore_index} # background
+  
+
+
 
 # # Pixel value of pixels to be ignored during loss computation and evaluation 
 ignore_index: -1
