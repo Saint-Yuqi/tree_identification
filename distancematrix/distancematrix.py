@@ -1,4 +1,5 @@
 import dendropy
+import os
 import pandas as pd
 import torch
 import numpy as np
@@ -89,7 +90,7 @@ for i, s1 in enumerate(labels_species):
         elif labels[j] == "Background" and labels[i] == "dead_tree":
             dist_matrix.iloc[i, j] = 1.0
         elif labels[i] == "Background" or labels[j] == "Background":
-            dist_matrix.iloc[i, j] = 1.0
+            dist_matrix.iloc[i, j] = 2.0
         # Handle dead_tree class
         elif labels[i] == "dead_tree" and labels[j] == "dead_tree":
             dist_matrix.iloc[i, j] = 0.0
@@ -117,14 +118,17 @@ for i, s1 in enumerate(labels_species):
 dist_matrix = dist_matrix.round(2)
 D = torch.tensor(dist_matrix.values, dtype=torch.float)
 
-torch.save(D, 'phylogenetic_distance_matrix.pt')
+# Ensure files are saved in the same directory as this script
+base_dir = os.path.dirname(__file__)
+
+torch.save(D, os.path.join(base_dir, 'phylogenetic_distance_matrix.pt'))
 print(f"Distance matrix saved as tensor with shape {D.shape}")
 
-dist_matrix.to_csv('phylogenetic_distance_matrix.csv', float_format='%.2f')
+dist_matrix.to_csv(os.path.join(base_dir, 'phylogenetic_distance_matrix.csv'), float_format='%.2f')
 print(f"Distance matrix saved as CSV with shape {dist_matrix.shape}")
 
-torch.save(labels, 'class_labels.pt')
-with open('class_labels.txt', 'w') as f:
+torch.save(labels, os.path.join(base_dir, 'class_labels.pt'))
+with open(os.path.join(base_dir, 'class_labels.txt'), 'w') as f:
     for i, label in enumerate(labels):
         f.write(f"{i}: {label}\n")
 print("Labels saved for reference")
