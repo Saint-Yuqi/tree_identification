@@ -83,11 +83,13 @@ def main(cfg: DictConfig) -> None:
     #%% model
     #TODO: change configurationfiles if neede
     modelchoice = cfg.model.modelchoice
+    nr_prototypes_per_class = [1]*cfg.model.num_classes
+    nr_prototypes_per_class[0]=4
 
     if modelchoice == 'SegmentationModel':
         model = SegmentationModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, d_matrix=D, d_matrix_eval=D_eval, lossratio=3)
     elif modelchoice == 'ProtoSegModel':
-        model = ProtoSegModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, d_matrix=D, d_matrix_eval=D_eval, lambda_d=0.3)
+        model = ProtoSegModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, num_prototypes_per_class=nr_prototypes_per_class, d_matrix=D, d_matrix_eval=D_eval, embedding_dim=16, lambda_d=0.3, lambda_CE = 0.5) #had 0.3 before now
     else:
         raise ValueError('Model Choice invalid')
     

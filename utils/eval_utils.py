@@ -24,7 +24,7 @@ from sklearn.metrics import ConfusionMatrixDisplay
 
 
 # =============================================================================
-def evaluate_model(model, dataloader, num_classes, device, ignore_index=-1, boost_pr=None, var_th=0.5, custom_avg=None, save_dir=None):
+def evaluate_model(model, dataloader, num_classes, device, ignore_index=-1, boost_pr=None, var_th=0.5, custom_avg=None, save_dir=None, threshold =None):
     '''
     Evaluates a semantic segmentation model using a confusion matrix and patch-based classification metrics.
     
@@ -69,11 +69,21 @@ def evaluate_model(model, dataloader, num_classes, device, ignore_index=-1, boos
         for batch in dataloader:
             imgs = batch['image'].to(device)
             masks = batch['mask'].to(device)
-            outputs = model(imgs) # run model and update confusion matrix
+            outputs = model(imgs) # shape: [8,62,640,640]
             _, top2_indices = torch.topk(outputs, 2, dim=1) # Get top-2 class indices for each pixel- Shape: (batch, 2, H, W)
-            preds = top2_indices[:, 0, :, :] # Get top-1 class as prediction - Shape: (batch, H, W)
             var = softmax_entropy(outputs, dim=1)
+
+            if threshold==None:
+                preds = top2_indices[:, 0, :, :] # Get top-1 class as prediction - Shape: (batch, H, W)
+
+            else: #apply threshold to generate background index
+                #print(f"threshold: {threshold} is applied")
+                probs= torch.softmax(outputs, dim=1)
+                max_probs, preds = torch.max(probs, dim=1)
+                bkg_mask = max_probs < threshold
+                preds[bkg_mask]=0  #bkg label is 0
                 
+            
             if boost_pr: # Boost Precision or Recall         
                 if boost_pr.lower().startswith("r"):  # Recall boosting
                     boost_mask = (preds == 0) & (var > var_th)
@@ -191,8 +201,17 @@ def visualize_save_confusions(confusion, save_dir, display_labels=None):
     # # create confusion matrices with different norms
     conf_all = confusion
     conf_norm_all = np.round(np.nan_to_num(confusion/np.sum(confusion),nan=0)*100,0)
-    conf_norm_pred = np.round(np.nan_to_num(confusion/np.sum(confusion,axis=0)[np.newaxis,:],nan=0)*100,0)
-    conf_norm_true = np.round(np.nan_to_num(confusion/np.sum(confusion,axis=1)[:,np.newaxis],nan=0)*100,0)
+    # Handle division by zero more safely
+    col_sums = np.sum(confusion, axis=0)
+    row_sums = np.sum(confusion, axis=1)
+    
+    # Use np.divide with proper handling of division by zero
+    conf_norm_pred = np.round(np.divide(confusion, col_sums[np.newaxis,:], 
+                                       out=np.zeros_like(confusion, dtype=float), 
+                                       where=col_sums!=0) * 100, 0)
+    conf_norm_true = np.round(np.divide(confusion, row_sums[:,np.newaxis], 
+                                       out=np.zeros_like(confusion, dtype=float), 
+                                       where=row_sums!=0) * 100, 0)
     
     # # visualize and save confusion matrices (without normalization)
     visualize_save_confusion(conf_all, os.path.join(save_dir,'confusion.jpg'), display_labels)

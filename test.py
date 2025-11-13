@@ -74,8 +74,10 @@ def main(cfg: DictConfig) -> None:
     # # set_patch_2_img_size
     # model.set_patch_2_img_size(False)
     # # run test_step
-    
-    name = f"{cfg.exp_name}_test_{int(time.time())}"
+
+    threshold = None# 0.041 #this is the threshold for the data to set it to background. #1/62=0.016
+    print(f"!Threshold set to {threshold}")
+    name = f"{cfg.exp_name}_test_{threshold}"
     logger = WandbLogger(name=name, project=cfg.log_name)
     trainer = pl.Trainer(logger=logger)
     trainer.test(model=model, dataloaders=dataModule)   
@@ -92,7 +94,7 @@ def main(cfg: DictConfig) -> None:
     
     # # # Classic Top-1
     metrics_dir_top_1 = make_dir(metrics_dir, 'top_1')
-    metrics = evaluate_model(model, test_loader, cfg.model.num_classes, device, custom_avg=cfg.data.class_groups, save_dir=metrics_dir_top_1)
+    metrics = evaluate_model(model, test_loader, cfg.model.num_classes, device, custom_avg=cfg.data.class_groups, save_dir=metrics_dir_top_1,threshold=threshold)
     visualize_scores_per_class(shrink_dict(metrics['semseg'], ['F1','IoU','Precision','Recall']), os.path.join(metrics_dir_top_1, 'semseg_scores.png'), class_names)
     visualize_save_confusions(metrics['conf'],metrics_dir_top_1,display_labels=class_names)
     print(f"Avg class-wise F1 scores - Top1Acc:  {np.array2string(metrics['semseg']['F1'], formatter={'float_kind': lambda x: f'{x:.3f}'})}")
