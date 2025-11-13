@@ -12,9 +12,12 @@ from losses_and_metrics.loss_functions import HierarchicalLoss, ProtoHierarchica
 from losses_and_metrics.metrics import AverageCostMetric
 from utils.scheduler_utils import get_scheduler
 
+D_path_eval = "distancematrix/eval_phylogenetic_distance_matrix.pt"
+D_eval= torch.load(D_path_eval)
+
 
 class SegmentationModel(pl.LightningModule):
-    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, ignore_index=-1, optimizer='AdamW', lr_scheduler=None, loss='CE', weight=None, patch_2_img_size=False, d_matrix=None, d_matrix_eval=None, lossratio=3):
+    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, ignore_index=-1, optimizer='AdamW', lr_scheduler=None, loss='CE', weight=None, patch_2_img_size=False, d_matrix=None, d_matrix_eval=D_eval, lossratio=3):
         super().__init__()
         self.save_hyperparameters()
         
@@ -173,22 +176,37 @@ class SegmentationModel(pl.LightningModule):
 
 
 class ProtoSegModel(pl.LightningModule):
-    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, loss='CE', ignore_index=-1, weight=None, optimizer='AdamW', lr_scheduler=None, patch_2_img_size=False, dist='euclidean', prototype_init=None, d_matrix = None, d_matrix_eval=None, lambda_d = 0.1 ):
+    def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, loss='CE', ignore_index=-1, weight=None, optimizer='AdamW', lr_scheduler=None, patch_2_img_size=False, dist='euclidean', prototype_init=None, num_prototypes_per_class=1, d_matrix = None, d_matrix_eval=D_eval, embedding_dim = 16, lambda_d = 0.1, lambda_CE = 0.5):
         super().__init__()
         self.save_hyperparameters()
-        embedding_dim = 16
+        self.embedding_dim = embedding_dim #first runs with 16
+        
+        if isinstance(num_prototypes_per_class, int):
+            if num_prototypes_per_class == 1:
+                self.one_PT_per_class = True
+            else:
+                self.one_PT_per_class = False
+            num_prototypes_per_class = [num_prototypes_per_class] * num_classes
+        else:
+            self.one_PT_per_class = False   
+                
+        self.num_prototypes = sum(num_prototypes_per_class)
+        self.num_prototypes_per_class = num_prototypes_per_class #list of integers (one for each class)
+        self.prototype_to_class = torch.repeat_interleave(torch.arange(num_classes), torch.tensor(num_prototypes_per_class)) 
+        #Todo: pprototype_to_class?
         decoder_channels = (256, 128, 64, 32, 16) #from the documentation...
 
         if model=='Unet':
             self.backbone = smp.Unet(encoder_name=encoder_name, classes=num_classes)
-            self.backbone.segmentation_head = nn.Conv2d(in_channels=decoder_channels[-1] ,out_channels=embedding_dim, kernel_size = 1)
+            self.backbone.segmentation_head = nn.Conv2d(in_channels=decoder_channels[-1] ,out_channels=self.embedding_dim, kernel_size = 1)
         else:
             raise ValueError('Model invalid')
        
-        self.prototype_layer = LearntPrototypes(model=lambda x: x, n_prototypes=num_classes, embedding_dim=embedding_dim, dist=dist, prototypes=prototype_init)
-        
+
+        self.prototype_layer = LearntPrototypes(model=lambda x: x, n_prototypes=self.num_prototypes, embedding_dim=self.embedding_dim, dist=dist, prototypes=prototype_init)
+        self.lambda_CE = lambda_CE
         if d_matrix != None:
-            self.disto_loss = DistortionLoss(D=d_matrix)
+            self.disto_loss = DistortionLoss(D=d_matrix, nr_protorypes_per_class=self.num_prototypes_per_class)
             self.lambda_d = lambda_d  # weight for distortion loss
         else:
             self.disto_loss = None
@@ -206,6 +224,7 @@ class ProtoSegModel(pl.LightningModule):
         
         elif loss == 'ProtoHierarchicalCE':
             self.criterion_protohier = ProtoHierarchicalLoss(ignore_index=ignore_index)
+            self.criterion_CE = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index)
             self.use_combined_loss = True 
         else:
             raise ValueError("Unsupported loss type")
@@ -248,17 +267,19 @@ class ProtoSegModel(pl.LightningModule):
         if getattr(self, 'use_combined_loss', False):
             loss_protohier = self.criterion_protohier(neg_dists, masks.long())
             self.disto_loss.D = self.disto_loss.D.to(self.prototype_layer.prototypes.device)
-            loss_d = self.disto_loss(self.prototype_layer.prototypes)
-            loss = loss_protohier + self.lambda_d * loss_d
+            #loss_d = self.disto_loss(self.prototype_layer.prototypes)
+            loss_CE = self.criterion_CE(neg_dists, masks.long()) #this line is new 30.10. (before it was without CE_Loss)
+            loss = loss_protohier  + self.lambda_CE * loss_CE #+ self.lambda_d * loss_d
             self.log(f'{stage}_loss_protohier', loss_protohier, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
-            self.log(f'{stage}_loss_disto', loss_d, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
+            #self.log(f'{stage}_loss_disto', loss_d, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
+            self.log(f'{stage}_loss_ce', loss_CE, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
         
         elif self.hparams.loss =='CE':
             loss = self.criterion(neg_dists, masks.long())
             self.log(f'{stage}_loss_ce', loss, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
 
         elif self.hparams.loss == 'ProtoHierarchical':
-            loss = self.criterion(neg_dists, masks.long())
+            loss = self.criterion_protohier(neg_dists, masks.long())
             self.log(f'{stage}_loss_protohier', loss, on_step=stage=='train', on_epoch=True, prog_bar=False, batch_size=images.shape[0])
         
         else:
@@ -310,7 +331,19 @@ class ProtoSegModel(pl.LightningModule):
         batch_size, channels, img_size, _ = x.shape
         patches, num_patches = patch_image_to_batch(x, self.hparams.img_size)
         embeddings = self.backbone(patches)    # (B, C_dec, H, W) at input res
-        logits = self.prototype_layer(embeddings)  
+        if self.one_PT_per_class:
+            logits = self.prototype_layer(embeddings)
+        else:
+            neg_dists = self.prototype_layer(embeddings)
+            B, _, H, W = neg_dists.shape
+            neg_dists_flat = neg_dists.permute(0, 2, 3, 1).reshape(-1, self.num_prototypes)
+            class_logits = []
+            start = 0
+            for k in self.num_prototypes_per_class:
+                class_logits.append(neg_dists_flat[:, start:start+k].max(dim=1).values)
+                start += k
+            class_logits = torch.stack(class_logits, dim=1)
+            logits = class_logits.reshape(B, H, W, -1).permute(0, 3, 1, 2)
         output_patches =  logits
         outputs = merge_output_patches_to_image(output_patches, num_patches, self.hparams.img_size, batch_size, img_size)
         return outputs
@@ -320,7 +353,21 @@ class ProtoSegModel(pl.LightningModule):
         if x.shape[-1] != self.hparams.img_size and self.hparams.patch_2_img_size:
             return self._forward_with_patches(x)
         embeddings = self.backbone(x)   # (B, C_dec, H, W) at input res
-        logits = self.prototype_layer(embeddings)  
+        
+        if self.one_PT_per_class == True:
+            logits = self.prototype_layer(embeddings)
+        
+        else: #multiple prototypes per class
+            neg_dists = self.prototype_layer(embeddings)
+            B, _, H, W = neg_dists.shape
+            neg_dists_flat = neg_dists.permute(0, 2, 3, 1).reshape(-1, self.num_prototypes)
+            class_logits = []
+            start = 0
+            for k in self.num_prototypes_per_class: #list of int   (k=#prototypes per class)
+                class_logits.append(neg_dists_flat[:, start:start+k].max(dim=1).values) #prototypes still sorted like the classes, but multiple per class possible. takes max dist.
+                start += k
+            class_logits = torch.stack(class_logits, dim=1)  # (N, num_classes)
+            logits = class_logits.reshape(B, H, W, -1).permute(0, 3, 1, 2)
         return logits # neg. distances betw. prototypes and points in embedding space
 
     
