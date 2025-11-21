@@ -57,7 +57,6 @@ def main(cfg: DictConfig) -> None:
         except Exception as e:
             print(f"Error at index {idx}: {e}")
     
-    
     #%% testing
     # # load model with ckpt_type checkpoint
     ckpts_paths = getListOfFiles(cfg.ckpt_path)
@@ -71,9 +70,12 @@ def main(cfg: DictConfig) -> None:
     # # load model with ckpt_path weights
     model = SegmentationModel.load_from_checkpoint(ckpt_path).to(device)
     #TODO: change if needed! model = ProtoSegModel.load_from_checkpoint(ckpt_path).to(device)
-    # # set_patch_2_img_size
-    # model.set_patch_2_img_size(False)
-    # # run test_step
+    
+    #change evaluation matrix:
+    D_path_eval = cfg.d_matrix_eval #"distancematrix/eval_phylogenetic_distance_matrix.pt"
+    d_matrix_eval= torch.load(D_path_eval)
+    model.hparams.d_matrix_eval=d_matrix_eval
+    model.test_AHC.D = d_matrix_eval
 
     threshold = None# 0.041 #this is the threshold for the data to set it to background. #1/62=0.016
     print(f"!Threshold set to {threshold}")
@@ -81,12 +83,10 @@ def main(cfg: DictConfig) -> None:
     logger = WandbLogger(name=name, project=cfg.log_name)
     trainer = pl.Trainer(logger=logger)
     trainer.test(model=model, dataloaders=dataModule)   
-
     
     # # all class names and colors in order of index
     class_names = [cfg.data.classes[i].name for i in sorted(cfg.data.classes.keys(), key=int)]
     class_colors = [cfg.data.classes[i].color for i in sorted(cfg.data.classes.keys(), key=int)]
-    
     
     #%% dataset-wise evaluation
     test_loader = dataModule.test_dataloader()
@@ -120,6 +120,7 @@ def main(cfg: DictConfig) -> None:
     pick_loader = dataModule.pick_dataloader()
     qual_dir = make_dir(cfg.test_path,'qualitative')
 
+
     # # Classic Top-1
     qual_dir_top_1 = make_dir(qual_dir, 'top_1')
     all_imgs, all_metrics, flt_metrics = evaluate_model_samplewise(model, pick_loader, cfg.model.num_classes, device, save_metrics_batch_limit=10, save_imgs_batch_limit=10)
@@ -129,7 +130,6 @@ def main(cfg: DictConfig) -> None:
 
     #%% re initialize hydra
     hydra.core.global_hydra.GlobalHydra.instance().clear()
-
 
 #%%    
 if __name__ == "__main__":
