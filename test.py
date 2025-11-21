@@ -76,6 +76,8 @@ def main(cfg: DictConfig) -> None:
     d_matrix_eval= torch.load(D_path_eval)
     model.hparams.d_matrix_eval=d_matrix_eval
     model.test_AHC.D = d_matrix_eval
+    
+
 
     threshold = None# 0.041 #this is the threshold for the data to set it to background. #1/62=0.016
     print(f"!Threshold set to {threshold}")
@@ -114,6 +116,7 @@ def main(cfg: DictConfig) -> None:
             metrics['semseg']['Recall'][idx]
         )
     wandb.log({"per_class_metrics": metrics_table})
+    wandb.log({"test_AHC_D_name": D_path_eval})
 
 
     #%% sample-wise evaluation and qualitative visualization (pick-data)
