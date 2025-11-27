@@ -5,9 +5,13 @@ import numpy as np
 import pandas as pd
 import xml.etree.ElementTree as ET
 import shutil
+import json
 ''' This file helps to compare Bbox and Mask labels between ObjDet and SemSegm Data
 - which images are in both datasets?
 - how do indices relate?
+
++ commmented out:
+- creates new directories for shared and non-shared images
 '''
 
 
@@ -184,7 +188,7 @@ print(df.head(10))
 
 # Filter for images for certain classes (ObjDet Index)
 
-classnumber= 12
+classnumber= 40
 df_labelx = df[df["IndexObjDet"].apply(lambda lst: lst is not None and classnumber in lst)]
 
 print(f"Number of identical images where ObjDet contains label {classnumber}:",
@@ -443,3 +447,124 @@ for h in common_hashes:
 
         out_path = os.path.join(out_dir, semsegm_base + ext)
         shutil.copy2(bbox_label_path, out_path)'''
+
+
+
+#add Bbox data to _new_masks
+'''
+new_root = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks"
+old_root = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_640_fL"   # original ObjDet folder
+
+splits = ["train", "test", "val"]
+
+for split in splits:
+    new_img_dir = os.path.join(new_root, split, "images")
+    old_bbox_dir = os.path.join(old_root, split, "labels")
+    out_bbox_dir = os.path.join(new_root, split, "original_Bbox")
+
+    os.makedirs(out_bbox_dir, exist_ok=True)
+
+    for fname in os.listdir(new_img_dir):
+        if not fname.lower().endswith(".png"):
+            continue
+
+        base = os.path.splitext(fname)[0]
+
+        # Possible Bbox label formats
+        candidates = [
+            os.path.join(old_bbox_dir, base + ".txt"),
+            os.path.join(old_bbox_dir, base + ".xml")
+        ]
+
+        src = next((p for p in candidates if os.path.exists(p)), None)
+
+        if src is None:
+            print(f"WARNING: No Bbox found for {split}/{fname}")
+            continue
+
+        shutil.copy2(src, os.path.join(out_bbox_dir, os.path.basename(src)))'''
+
+#add bboxes with changed labels
+'''
+new_root = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks"
+old_root = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_640_fL"
+mapping_json = "label_mapping.json"
+
+
+# Load mapping: old → new class id
+with open(mapping_json, "r") as f:
+    mapping = json.load(f)["dataset"]
+mapping = {int(k): int(v) for k, v in mapping.items()}
+
+splits = ["train", "test", "val"]
+
+
+def remap_txt(src_path, dst_path):
+    """YOLO .txt format:  class x_center y_center w h"""
+    out_lines = []
+    with open(src_path, "r") as f:
+        for line in f:
+            if line.strip() == "":
+                continue
+            parts = line.strip().split()
+            old = int(float(parts[0]))
+            new = mapping.get(old, old)   # if missing, keep same
+            parts[0] = str(new)
+            out_lines.append(" ".join(parts))
+
+    with open(dst_path, "w") as f:
+        for l in out_lines:
+            f.write(l + "\n")
+
+
+def remap_xml(src_path, dst_path):
+    """Pascal VOC/ArcGIS .xml format: <object><name>ID</name></object>"""
+    tree = ET.parse(src_path)
+    root = tree.getroot()
+
+    for obj in root.findall("object"):
+        name_tag = obj.find("name")
+        if name_tag is not None:
+            old = int(name_tag.text)
+            new = mapping.get(old, old)
+            name_tag.text = str(new)
+
+    tree.write(dst_path)
+
+
+for split in splits:
+    new_img_dir = os.path.join(new_root, split, "images")
+    old_bbox_dir = os.path.join(old_root, split, "labels")
+    new_bbox_dir = os.path.join(new_root, split, "new_Bbox")
+
+    os.makedirs(new_bbox_dir, exist_ok=True)
+
+    for fname in os.listdir(new_img_dir):
+        if not fname.lower().endswith(".png"):
+            continue
+
+        base = os.path.splitext(fname)[0]
+
+        candidates = [
+            os.path.join(old_bbox_dir, base + ".txt"),
+            os.path.join(old_bbox_dir, base + ".xml"),
+        ]
+
+        src = next((p for p in candidates if os.path.exists(p)), None)
+
+        if src is None:
+            print(f"WARNING: No Bbox found for {split}/{fname}")
+            continue
+
+        ext = os.path.splitext(src)[1]
+        dst = os.path.join(new_bbox_dir, base + ext)
+
+        # Remap according to type
+        if ext == ".txt":
+            remap_txt(src, dst)
+        elif ext == ".xml":
+            remap_xml(src, dst)
+        else:
+            print(f"Unknown Bbox label format: {src}")'''
+
+            
