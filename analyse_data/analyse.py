@@ -12,7 +12,6 @@ import pandas as pd
 number= 34
 
 
-
 with open("../configs/data/treeAI_classes.yaml") as f:
     class_cfg = yaml.safe_load(f)
 

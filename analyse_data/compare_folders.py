@@ -6,6 +6,7 @@ import pandas as pd
 import xml.etree.ElementTree as ET
 import shutil
 import json
+
 ''' This file helps to compare Bbox and Mask labels between ObjDet and SemSegm Data
 - which images are in both datasets?
 - how do indices relate?
@@ -116,6 +117,23 @@ def copy_non_overlapping_images(source_folder, dest_folder):
         # Copy the image
         shutil.copy2(src_path, os.path.join(dest_folder, fname))
 
+
+def find_objdet_for_semsegm(semsegm_image_path, map_A, map_B):
+    """
+    Given a SemSegm image path, return list of matching ObjDet images.
+    Matching is based on identical SHA256 file hashes.
+    
+    Returns:
+        list of (folderB, fnameB, fullB) or empty list if no match.
+    """
+    h = file_hash(semsegm_image_path)
+    
+    # If the hash exists in B → return all matching images
+    if h in map_B:
+        return map_B[h]
+    else:
+        return []
+
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
@@ -197,6 +215,18 @@ print(f"Number of identical images where ObjDet contains label {classnumber}:",
 print(df_labelx.head(10))
 
 
+
+#find corresponding match
+
+semsegm_image = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/train/images/000000000317.png"
+
+matches = find_objdet_for_semsegm(semsegm_image, map_A, map_B)
+
+if not matches:
+    print("No corresponding ObjDet image found.")
+else:
+    for folder, fname, fullpath in matches:
+        print("Matching ObjDet image:", fullpath)
 
 
 
@@ -486,8 +516,8 @@ for split in splits:
 
 #add bboxes with changed labels
 '''
-new_root = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks"
-old_root = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_640_fL"
+new_root = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_both"
+old_root = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_both"
 mapping_json = "label_mapping.json"
 
 
@@ -496,7 +526,7 @@ with open(mapping_json, "r") as f:
     mapping = json.load(f)["dataset"]
 mapping = {int(k): int(v) for k, v in mapping.items()}
 
-splits = ["train", "test", "val"]
+splits = ["train", "test", "val", "pick"]
 
 
 def remap_txt(src_path, dst_path):
@@ -534,7 +564,7 @@ def remap_xml(src_path, dst_path):
 
 for split in splits:
     new_img_dir = os.path.join(new_root, split, "images")
-    old_bbox_dir = os.path.join(old_root, split, "labels")
+    old_bbox_dir = os.path.join(old_root, split, "bboxes")
     new_bbox_dir = os.path.join(new_root, split, "new_Bbox")
 
     os.makedirs(new_bbox_dir, exist_ok=True)
@@ -565,6 +595,6 @@ for split in splits:
         elif ext == ".xml":
             remap_xml(src, dst)
         else:
-            print(f"Unknown Bbox label format: {src}")'''
+            print(f"Unknown Bbox label format: {src}")
 
-            
+'''

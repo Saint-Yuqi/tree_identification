@@ -11,9 +11,9 @@ Assumptions:
 
 Usage: (change directoriepath)
   python3 overlay_semseg_masks.py \
-    --images_dir /home/c/shursc/data/TreeAI/34_RGB_SemSegm_640_pL/test/images \
-    --labels_dir /home/c/shursc/data/TreeAI/34_RGB_SemSegm_640_pL/test/labels \
-    --output_dir /home/c/shursc/data/TreeAI/34_RGB_SemSegm_640_pL/test/overlays \
+    --images_dir /home/c/shursc/data/TreeAI/12_RGB_SemSegm_640_fL/train/images \
+    --labels_dir /home/c/shursc/data/TreeAI/12_RGB_SemSegm_640_fL/train/labels \
+    --output_dir /home/c/shursc/data/TreeAI/12_RGB_SemSegm_640_fL/train/overlays \
     --alpha 0.5 \
     --legend \
     --classes_yaml /home/c/shursc/code/tree_identification/configs/data/treeAI_classes.yaml
