@@ -2,7 +2,12 @@ import dendropy
 import os
 import pandas as pd
 import torch
-import numpy as np
+
+
+"""this code generates a distance matrix based on genes
+(it is not used in the end and was created by Dong)
+"""
+
 
 newick_str = """
 ((((betula_papyrifera:0.05,betula_alleghaniensis:0.05,betula_pendula:0.05,betula_lenta:0.05)Betula:0.1,
@@ -127,11 +132,14 @@ print(f"Distance matrix saved as tensor with shape {D.shape}")
 dist_matrix.to_csv(os.path.join(base_dir, 'phylogenetic_distance_matrix.csv'), float_format='%.2f')
 print(f"Distance matrix saved as CSV with shape {dist_matrix.shape}")
 
+'''
 torch.save(labels, os.path.join(base_dir, 'class_labels.pt'))
 with open(os.path.join(base_dir, 'class_labels.txt'), 'w') as f:
     for i, label in enumerate(labels):
         f.write(f"{i}: {label}\n")
 print("Labels saved for reference")
+'''
+
 
 print(f"\nDistance Matrix Statistics:")
 dead_tree_idx = labels.index('dead_tree')
@@ -145,5 +153,5 @@ print(f"Dead Tree <-> betula_papyrifera: {D[dead_tree_idx, betula_pap_idx]:.2f}"
 print(f"\nFiles saved:")
 print("- phylogenetic_distance_matrix.pt")
 print("- phylogenetic_distance_matrix.csv") 
-print("- class_labels.pt")
-print("- class_labels.txt")
+#print("- class_labels.pt")
+#print("- class_labels.txt")
