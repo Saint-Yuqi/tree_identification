@@ -4,21 +4,26 @@ import yaml
 from collections import Counter
 from pathlib import Path
 import matplotlib.pyplot as plt
-import time
 import pandas as pd
 
+""" 
+this file analyses the speciedistributions in a SemSegm folder (masks)
+input: folders ( ~ 60)
+output: tree_statistics_datafile.xlsx (and .csv) containing information about the speciedistribution in the folder")
 
+
+"""
 #specify which data you want to consider: SemSem (12 or 34)
-number= 34
+number= 12
 
-
+#load classnames and indexes
 with open("../configs/data/treeAI_classes.yaml") as f:
     class_cfg = yaml.safe_load(f)
 
 id_to_name = {int(k): v["name"] for k, v in class_cfg["classes"].items()}
 
 
-
+#check the distribution of the species in the folders
 def analyze_folder(folder_path):
     label_folder = Path(folder_path)
     label_files = list(label_folder.glob("*.png"))
@@ -44,8 +49,8 @@ def analyze_folder(folder_path):
     return total_images, image_presence, pixel_presence, total_pixels
 
 
-#############################################################################################
 
+#############################################################################################
 if number == 12:
     labeled = "fL"
 elif number == 34:
@@ -53,6 +58,7 @@ elif number == 34:
 else:
     print("check your data")
 
+#folders to analyse
 folders = {
     "train": f"/zfs/ai4good/datasets/tree/TreeAI/{number}_RGB_SemSegm_640_{labeled}/train/labels",
     "val":   f"/zfs/ai4good/datasets/tree/TreeAI/{number}_RGB_SemSegm_640_{labeled}/val/labels",
@@ -98,29 +104,7 @@ for name, folder in folders.items():
         
 
 df = pd.DataFrame(data_dict)
-df.to_csv(f"tree_statistics_{number}.csv", index=False)
-df.to_excel(f"tree_statistics_{number}.xlsx", index=False)
+df.to_csv(f"distributions/tree_statistics_{number}.csv", index=False)
+df.to_excel(f"distributions/tree_statistics_{number}.xlsx", index=False)
 
 print(f"Saved tree_statistics_{number}.xlsx")
-
-
-
-
-
-
-
-
-    
-'''   
-
-start = time.time()
-total_images, image_presence, pixel_presence, total_pixels = analyze_folder(mask_folder_train)
-end = time.time()
-
-print(f"Time taken: {end - start} seconds")
-
-print("Total images: ", total_images)
-print("Image presence: ", image_presence)
-print("Pixel presence: ", pixel_presence)
-print("Total pixels: ", total_pixels)
-'''

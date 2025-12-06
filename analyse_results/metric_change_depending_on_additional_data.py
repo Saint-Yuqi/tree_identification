@@ -33,7 +33,7 @@ df_bbox_per_class = pd.read_csv(bbox_per_class)
 bbox_map = dict(zip(df_bbox_per_class["class_id"], df_bbox_per_class["count"]))
 
 
-tree_presence_original= "../analyse_data/tree_statistics_12.csv"
+tree_presence_original= "../analyse_data/distributions/tree_statistics_12.csv"
 df_original_statistics = pd.read_csv(tree_presence_original)
 idx_to_train_rel_pix = dict(zip(df_original_statistics["ID"], df_original_statistics["train_rel_pix_pres"]))
 idx_to_train_rel_im = dict(zip(df_original_statistics["ID"], df_original_statistics["train_rel_im_pres"]))

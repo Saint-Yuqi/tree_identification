@@ -1,16 +1,25 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
-file_12 = "tree_statistics_12.csv"
-file_34 = "tree_statistics_34.csv"
+
+""" 
+this file creates plots to visualise the tree distributions
+input: files with distributions (created by analyse_specie_distribution.py)
+save plots in distributions/...
+"""
+
+
+
+file_12 = "distributions/tree_statistics_12.csv"
+file_34 = "distributions/tree_statistics_34.csv"
 
 df_12 = pd.read_csv(file_12)
 df_34 = pd.read_csv(file_34)
 
 nr = 12
 
+#plot to show distribution for a given folder
 def create_plot(df,nr, x_input, y_input):
-
     plt.figure(figsize=(10,6))
     plt.bar(df[x_input], df[y_input])
     plt.xlabel("class name")
@@ -20,10 +29,11 @@ def create_plot(df,nr, x_input, y_input):
     plt.tight_layout()  # adjust layout to fit labels
     plt.yscale('log')
     plt.show()
-    plt.savefig(f"Speciedistribution_{nr}_{y_input}.png")
+    plt.savefig(f"distributions/Speciedistribution_{nr}_{y_input}.png")
 print("done")
 
 
+#create plots
 create_plot(df_12, 12,"Tree Name", "train_rel_pix_pres")
 create_plot(df_34, 34, "Tree Name", "train_rel_pix_pres")
 create_plot(df_12, 12,"Tree Name", "test_rel_pix_pres")
@@ -33,7 +43,7 @@ create_plot(df_34, 34, "Tree Name", "val_rel_pix_pres")
 
 
 
-
+#plot to compare train, test and validation files
 def create_combined_plot(df, nr, x_input, y_inputs):
     plt.figure(figsize=(10,6))
 
@@ -51,10 +61,11 @@ def create_combined_plot(df, nr, x_input, y_inputs):
     plt.legend()
     plt.tight_layout()
 
-    plt.savefig(f"Speciedistribution_{nr}_combined.png")
+    plt.savefig(f"distributions/Speciedistribution_{nr}_combined.png")
     plt.show()
 
-# Example calls
+
+#create plots
 create_combined_plot(df_12, 12, "Tree Name", ["train_rel_pix_pres", "test_rel_pix_pres", "val_rel_pix_pres"])
 create_combined_plot(df_34, 34, "Tree Name", ["train_rel_pix_pres", "test_rel_pix_pres", "val_rel_pix_pres"])
 
