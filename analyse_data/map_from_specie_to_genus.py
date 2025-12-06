@@ -87,7 +87,7 @@ for species, _, _, _, genus in TAXONOMY_ROWS:
         genus = species
 
     if genus not in genus_to_index:
-        genus_to_index[genus] = len(genus_to_index) + 1  # start at 1
+        genus_to_index[genus] = len(genus_to_index)   # start at 0
 
     specie_to_genus_index[specieindex] = genus_to_index[genus]
     specieindex =specieindex +1
@@ -99,7 +99,7 @@ output = {
     "specie_to_genus_index": specie_to_genus_index,
 }
 
-save_path = os.path.join("..", "configs", "data", "treeAI_genus.yaml")
+save_path = os.path.join("..","configs", "genus", "treeAI_genus.yaml")
 
 with open(save_path, "w") as f:
     yaml.safe_dump(output, f, sort_keys=False)
