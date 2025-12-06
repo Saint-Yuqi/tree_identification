@@ -15,7 +15,7 @@ from omegaconf import DictConfig, OmegaConf
 from datasets.semseg_datamodule import SegmentationDataModule
 from models.semseg_plm import SegmentationModel,ProtoSegModel
 from utils.utils import make_dir, shrink_dict, getListOfFiles, natural_keys
-from utils.eval_utils import evaluate_model, evaluate_model_samplewise, visualize_results, visualize_save_confusions, visualize_scores_per_class
+from utils.eval_utils import evaluate_model, evaluate_model_samplewise, visualize_results, visualize_save_confusions, visualize_scores_per_class, visualize_confusion_genus, count_errors_by_distance
 from utils.transform_utils import get_transforms
 
 # # this can avoid avoid shared memory allocation errors
@@ -69,14 +69,18 @@ def main(cfg: DictConfig) -> None:
     OmegaConf.resolve(cfg) # since test_path is dynamically set in the hydra config we need to run the interpolation again with modified ckpt_type
     # # load model with ckpt_path weights
     model = SegmentationModel.load_from_checkpoint(ckpt_path).to(device)
-    #TODO: change if needed! model = ProtoSegModel.load_from_checkpoint(ckpt_path).to(device)
     
     #change evaluation matrix:
     D_path_eval = cfg.d_matrix_eval #"distancematrix/eval_phylogenetic_distance_matrix.pt"
     d_matrix_eval= torch.load(D_path_eval)
     model.hparams.d_matrix_eval=d_matrix_eval
     model.test_AHC.D = d_matrix_eval
-    
+
+    #add information about genus to index and specie to index
+    genus_to_index=cfg.genus.genus_to_index
+    specie_to_genus=cfg.genus.specie_to_genus_index
+    model.hparams.genus_to_index=genus_to_index
+    model.hparams.specie_to_genus=specie_to_genus
 
 
     threshold = None# 0.041 #this is the threshold for the data to set it to background. #1/62=0.016
@@ -89,18 +93,26 @@ def main(cfg: DictConfig) -> None:
     # # all class names and colors in order of index
     class_names = [cfg.data.classes[i].name for i in sorted(cfg.data.classes.keys(), key=int)]
     class_colors = [cfg.data.classes[i].color for i in sorted(cfg.data.classes.keys(), key=int)]
+    labels_sorted = [k for k,_ in sorted(model.hparams.genus_to_index.items(), key=lambda x: x[1])]
+    
     
     #%% dataset-wise evaluation
     test_loader = dataModule.test_dataloader()
     metrics_dir = make_dir(cfg.test_path,'quantitative')
     
-    # # # Classic Top-1
+    # # # Classic Top-1   
     metrics_dir_top_1 = make_dir(metrics_dir, 'top_1')
     metrics = evaluate_model(model, test_loader, cfg.model.num_classes, device, custom_avg=cfg.data.class_groups, save_dir=metrics_dir_top_1,threshold=threshold)
     visualize_scores_per_class(shrink_dict(metrics['semseg'], ['F1','IoU','Precision','Recall']), os.path.join(metrics_dir_top_1, 'semseg_scores.png'), class_names)
     visualize_save_confusions(metrics['conf'],metrics_dir_top_1,display_labels=class_names)
+    visualize_confusion_genus(metrics['conf_genus'], save_dir= metrics_dir_top_1, display_labels=labels_sorted)
     print(f"Avg class-wise F1 scores - Top1Acc:  {np.array2string(metrics['semseg']['F1'], formatter={'float_kind': lambda x: f'{x:.3f}'})}")
     
+    # count errors by distance
+    errors_by_dist ,tot_errors = count_errors_by_distance(metrics['conf'], distance_matrix=d_matrix_eval,bins_edges=[0.0, 3.0, 7.0, 10.1])
+    print("Errors by distance:")
+    for dist, count in errors_by_dist.items():
+        print("Interval: ", dist, "relative_errors", count/tot_errors)
 
     # get metrics per class to WandB
     columns = ["model_name", "class_name", "F1", "IoU", "Precision", "Recall"]

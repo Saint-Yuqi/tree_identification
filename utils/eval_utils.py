@@ -61,9 +61,20 @@ def evaluate_model(model, dataloader, num_classes, device, ignore_index=-1, boos
     
     model.eval()
     model.to(device)
+
+    
+    # get genus/species mappings from model hyperparameters
+    specie_to_genus = model.hparams.specie_to_genus
+    num_genera = len(model.hparams.genus_to_index)
+
+    # create tensor mapping from pixel class -> genus class
+    specie_to_genus_tensor = torch.tensor([specie_to_genus[i] for i in range(num_classes)],
+    device=device,) 
+    
     
     # # Initialize confusion matrix counters for semseg and classification (each patch size and class)
     conf_ = MulticlassConfusionMatrix(num_classes, ignore_index=ignore_index).to(device)
+    conf_genus_ = MulticlassConfusionMatrix(num_genera, ignore_index=ignore_index).to(device)
 
     with torch.no_grad():
         for batch in dataloader:
@@ -77,7 +88,6 @@ def evaluate_model(model, dataloader, num_classes, device, ignore_index=-1, boos
                 preds = top2_indices[:, 0, :, :] # Get top-1 class as prediction - Shape: (batch, H, W)
 
             else: #apply threshold to generate background index
-                #print(f"threshold: {threshold} is applied")
                 probs= torch.softmax(outputs, dim=1)
                 max_probs, preds = torch.max(probs, dim=1)
                 bkg_mask = max_probs < threshold
@@ -94,9 +104,18 @@ def evaluate_model(model, dataloader, num_classes, device, ignore_index=-1, boos
             
             # # update confusion matrix
             conf_.update(preds, masks)
+
+
+            #update genus confusion matrix
+            pred_genus = specie_to_genus_tensor[preds.clamp(min=0)]
+            masks_genus = specie_to_genus_tensor[masks.clamp(min=0)]
+            ignore_masks = (masks ==ignore_index)
+            masks_genus[ignore_masks] = ignore_index
+            conf_genus_.update(pred_genus, masks_genus)
         
     # # Semantic segmentation metrics
     conf = conf_.compute().cpu().numpy()
+    conf_genus = conf_genus_.compute().cpu().numpy()
     TP = np.diag(conf)
     FP = conf.sum(axis=0) - TP
     FN = conf.sum(axis=1) - TP
@@ -136,6 +155,7 @@ def evaluate_model(model, dataloader, num_classes, device, ignore_index=-1, boos
             json.dump(convert_ndarray_to_list(metrics_semseg), f, indent=4)
             
     metrics = {'conf': conf,
+                'conf_genus': conf_genus,
                'semseg': metrics_semseg,
                }       
 
@@ -219,6 +239,34 @@ def visualize_save_confusions(confusion, save_dir, display_labels=None):
     visualize_save_confusion(conf_norm_pred, os.path.join(save_dir,'confusion_norm_pred.jpg'), display_labels)
     visualize_save_confusion(conf_norm_true, os.path.join(save_dir,'confusion_norm_true.jpg'), display_labels)
     
+#visualize the confusion matrix per genus
+def visualize_confusion_genus(conf_genus, save_dir, display_labels=None, fontsize = 3):
+    #visualizes and saves genus-level confusion matrices
+    
+    #unshown index
+    conf_all = conf_genus
+    # normalized by total sum
+    conf_norm_all = np.round(np.nan_to_num(conf_genus/np.sum(conf_genus), nan=0)*100, 0)
+    
+    # normalized by predicted (column-wise) and true (row-wise)
+    col_sums = np.sum(conf_genus, axis=0)
+    row_sums = np.sum(conf_genus, axis=1)
+    
+    conf_norm_pred = np.round(np.divide(conf_genus, col_sums[np.newaxis,:], 
+                                        out=np.zeros_like(conf_genus, dtype=float), 
+                                        where=col_sums!=0) * 100, 0)
+    conf_norm_true = np.round(np.divide(conf_genus, row_sums[:,np.newaxis], 
+                                        out=np.zeros_like(conf_genus, dtype=float), 
+                                        where=row_sums!=0) * 100, 0)
+    
+    # visualize and save
+    visualize_save_confusion(conf_all, os.path.join(save_dir,'confusion_genus.jpg'), display_labels, fontsize)
+    visualize_save_confusion(conf_norm_all, os.path.join(save_dir,'confusion_genus_norm_all.jpg'), display_labels, fontsize)
+    visualize_save_confusion(conf_norm_pred, os.path.join(save_dir,'confusion_genus_norm_pred.jpg'), display_labels, fontsize)
+    visualize_save_confusion(conf_norm_true, os.path.join(save_dir,'confusion_genus_norm_true.jpg'), display_labels, fontsize)
+    np.save(os.path.join(save_dir, 'confusion_genus.npy'), conf_norm_pred)
+
+
 
 # =============================================================================
 def evaluate_model_samplewise(model, dataloader, num_classes, device, ignore_index=-1, boost_pr=None, var_th=0.5, save_metrics_batch_limit=None, save_imgs_batch_limit=10):
@@ -473,3 +521,54 @@ def visualize_results(imgs, masks, preds, colors, variances=None, num_samples=5,
 # =============================================================================
 def softmax_entropy(probabilities, dim):
     return -torch.sum(probabilities * torch.log(probabilities + 1e-10), dim=dim)
+
+# =============================================================================
+def count_errors_by_distance(conf, distance_matrix, bins_edges=[0.0, 3.0, 6.0, 10.0, float("inf")]):
+    """
+    Counts the number of errors in specified distance ranges using a confusion matrix and distance matrix.
+    
+    Parameters:
+    -----------
+    conf : np.ndarray
+        Confusion matrix of shape (num_classes, num_classes).
+    distance_matrix : np.ndarray
+        Symmetric matrix of shape (num_classes, num_classes) with distances between classes.
+        D[i, j] gives distance between class i and class j.
+    bins_edges : list of numbers
+        edges of the categories we want to count
+        
+    Returns:
+    --------
+    errors_by_bin : dict
+        Dictionary mapping bin string (e.g., '1-3') to total number of errors in that range.
+    total_errors : int
+        Total number of misclassifications (off-diagonal elements).
+    """
+    if conf.shape != distance_matrix.shape:
+        raise ValueError("conf and distance_matrix must have the same shape")
+    
+    # Mask out diagonal (correct predictions)
+    error_mask = ~np.eye(conf.shape[0], dtype=bool)
+    
+    # Extract only errors
+    errors = conf[error_mask]
+    distances = distance_matrix[error_mask]
+    
+    errors_by_bin = {}
+    for i in range(len(bins_edges) - 1):
+        low = bins_edges[i]
+        high = bins_edges[i + 1]
+
+        if np.isinf(high): # Last bin: include everything >= low
+            bin_mask = (distances >= low)
+        else: # Half-open interval [low, high)
+            bin_mask = (distances >= low) & (distances < high)
+
+        count = errors[bin_mask].sum()
+        errors_by_bin[f"{low}–{high}"] = int(count)
+
+    total_errors = errors.sum()
+    total_errors = int(errors.sum())
+    
+    return errors_by_bin, total_errors
+
