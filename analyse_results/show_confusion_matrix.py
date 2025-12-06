@@ -3,11 +3,13 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import ConfusionMatrixDisplay
 
 
-'''this file generates the confusion matrixes for species and genus
-these are used for the paper
-inputs: confusion matrix from test file (change the path!)'''
+'''
+this file generates the plots for the confusion matrixes for genus
+(used for the paper)
+inputs: confusion matrix (generate by running test.py)
+'''
 
-#load data:
+#load data after running the test.py for model. #TODO: change to your path
 conf_genus_path = "/home/c/shursc/code/tree_identification/lightning_logs/20251119_093300.602560_Unet_resnet50_CE_320_62_wrs_True/test_20251206_100416.557309_best_epoch=315_640/quantitative/top_1/confusion_genus.npy"
 conf_genus_hierarchical_path = "/home/c/shursc/code/tree_identification/lightning_logs/20251120_093110.096873_Unet_resnet50_HierarchicalCE_320_62_wrs_True/test_20251206_113046.771390_best_epoch=469_640/quantitative/top_1/confusion_genus.npy"
 conf_genus= np.load(conf_genus_path)
@@ -29,6 +31,7 @@ ignore_index_genus=[18,26,27] #corniferous, carpinus, deciduous
 labels = [name for name, idx in sorted(genus_to_index.items(), key=lambda x: x[1]) 
           if idx not in ignore_index_genus]
 
+
 #remove labels from original confusion matrix (here it is important that the corresponding rows/columns are 0!)
 conf_genus = np.delete(conf_genus, ignore_index_genus, axis=0)
 conf_genus = np.delete(conf_genus, ignore_index_genus, axis=1)
@@ -38,7 +41,10 @@ conf_genus_hier = np.delete(conf_genus_hier, ignore_index_genus, axis=1)
 
 conf_diff = conf_genus_hier - conf_genus
 
+
+############ Plot for just one model ##################
 # Plot confusion matrix for genus level
+
 fig, ax = plt.subplots(figsize=(7, 6))
 disp = ConfusionMatrixDisplay(conf_genus, display_labels=labels)
 disp.plot(ax=ax, cmap='Blues', values_format='.0f',colorbar=False)
@@ -59,7 +65,8 @@ plt.close()
 
 
 
-#DIFFERENCE
+########### plot difference between models #####################
+
 fig, ax = plt.subplots(figsize=(7, 6))
 
 # Display the difference matrix
@@ -82,16 +89,15 @@ ax.set_ylabel("True label", fontsize=13)
 ax.set_title("Difference in Confusion Matrices", fontsize=16)
 
 plt.tight_layout()
-plt.savefig("genus_confusion_difference.pdf", dpi=300)
+plt.savefig("resulting_images/genus_confusion_difference.pdf", dpi=300)
 plt.close()
 
 
 
-#############################################
-#  plot with three matrices: BL, Hierarchical and Difference 
-##############################################
 
-#plot with two subplots:
+#############################################
+#  plot with two matrices: BL, Hierarchical
+##############################################
 
 # Plot 3 subplots
 fig, axes = plt.subplots(1, 2, figsize=(14, 7))
@@ -117,7 +123,7 @@ for ax in axes:
     ax.set_ylabel("True label", fontsize=13)
 
 plt.tight_layout()
-plt.savefig("genus_confusion_BL_hierarchical.pdf", dpi=300, bbox_inches='tight')
+plt.savefig("resulting_images/genus_confusion_BL_hierarchical.pdf", dpi=300, bbox_inches='tight')
 
 
 
@@ -168,12 +174,6 @@ plt.tight_layout()
 #plt.savefig("genus_confusion_comparison_vertical.pdf", dpi=300, bbox_inches='tight')
 plt.show()
 
-
-
-
-#######################################################################################
-#for species level
-###############################################################################
 
 
 

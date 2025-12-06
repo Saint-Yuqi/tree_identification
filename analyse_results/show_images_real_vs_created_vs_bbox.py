@@ -1,15 +1,15 @@
 import matplotlib.pyplot as plt
-import cv2
 import os
 from PIL import Image
 import yaml
 import numpy as np
 
-'''create figure:
-3 images in one row: real, created, bbox
-one row per image'''
-
-
+'''
+create figures: real image with bounding boxes vs. "real" masks vs. generated masks
+3 images in one row
+one row per image
+input the image paths in ~line 120
+'''
 
 
 def load_image_rgb(path):
@@ -36,11 +36,8 @@ def colorize_label(mask, palette):
     idx[mask == -1] = palette_size - 1
     return palette[idx]
 
-# ----------------------------------------------------------------------
+
 # Load class names + colors from YAML
-# ----------------------------------------------------------------------
-
-
 def load_classes_yaml(path):
     with open(path, "r") as f:
         data = yaml.safe_load(f)["classes"]
@@ -68,9 +65,8 @@ def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip("#")
     return np.array([int(hex_color[i:i+2], 16) for i in (0, 2, 4)], dtype=np.uint8)
 
-# ----------------------------------------------------------------------
+
 # Build palette
-# ----------------------------------------------------------------------
 def build_palette(id_to_color):
     max_id = max(id_to_color.keys())
     palette = np.zeros((max_id + 2, 3), dtype=np.uint8)  
@@ -115,7 +111,7 @@ def draw_bboxes(image_rgb, boxes, palette):
 # Main plotting code
 # ----------------------------------------------------------------------
 
-classes_yaml = "/home/c/shursc/code/tree_identification/configs/data/treeAI_classes.yaml"   # <-- put your path
+classes_yaml = "/home/c/shursc/code/tree_identification/configs/data/treeAI_classes.yaml"   
 id_to_name, id_to_color = load_classes_yaml(classes_yaml)
 palette = build_palette(id_to_color)
 
@@ -128,18 +124,10 @@ labels_Bbox_changed = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_both/train/new_B
 
 image_list = ["000000001508", "000000001856", "000000001532","000000000669"]
 
-#pdf_1: ["000000001302", "000000001240", "000000001134", "000000001074"]
-#pdf_2: ["000000001212", "000000001353", "000000001367", "000000001466"]
-#pdf_3: ["000000001508", "000000001532", "000000001608", "000000001635"]
-#pdf_4: ["000000001856", "000000002023", "000000002145", "000000002213"]
-#pdf_5:
-#pdf_6:["000000000327", "000000001240", "000000001608", "000000000659"]
-#["000000000505", "000000000659", "000000000669", "000000000729"]
-
-#app_1: ["000000001134", "000000001367", "000000001240", "000000001353"]
-#app_2: ["000000001508", "000000001856", "000000001532","000000000669"]
-#real: ["000000000327", "000000001302"]
-
+#what we used in the paper:
+#main_text: ["000000000327", "000000001302"]
+#appemndix_1: ["000000001134", "000000001367", "000000001240", "000000001353"]
+#appendix_2: ["000000001508", "000000001856", "000000001532","000000000669"]
 #for one page image good sizes are as follows: 4 images,figsize(14, 4*len(image_list))), 
 # set_title fontsize 16 or 17, fontsize = 15
 
@@ -215,4 +203,4 @@ for row_idx, image in enumerate(image_list):
         frameon=False   )
 
 plt.tight_layout()
-plt.savefig("real_vs_created_vs_bbox_app2.pdf")
+plt.savefig("resulting_images/real_vs_created_vs_bbox_app2.pdf")

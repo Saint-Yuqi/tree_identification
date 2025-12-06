@@ -4,9 +4,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 '''
-- compare metrics of outcomes depending on how many new species got created.
+here we analyse the model after adding new data
+create plots of how metrics changes, depending on how many new trees of a specie is added
 
-TODO: depending on how many data are in there.
+input: metrics_semseg.json files of baseline model and model with additional data. they are created when running test.py
+change metric if you want to see results for any other metric.
 '''
 
 #-------------------
@@ -21,15 +23,17 @@ with open(BL_model, "r") as f:
 with open(model_add_data, "r") as f:
     model_add_data = json.load(f)
 
-F1_BL = np.array(BL_model["IoU"], dtype=float)
-F1_add_data = np.array(model_add_data["IoU"], dtype=float)
+
+#TODO: chan be changed to any metric
+F1_BL = np.array(BL_model["F1"], dtype=float)
+F1_add_data = np.array(model_add_data["F1"], dtype=float)
 
 bbox_per_class = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_both/bbox_counts_train_folder.csv"
 df_bbox_per_class = pd.read_csv(bbox_per_class)
 bbox_map = dict(zip(df_bbox_per_class["class_id"], df_bbox_per_class["count"]))
 
 
-tree_presence_original= "/home/c/shursc/code/tree_identification/analyse_data/tree_statistics_12.csv"
+tree_presence_original= "../analyse_data/tree_statistics_12.csv"
 df_original_statistics = pd.read_csv(tree_presence_original)
 idx_to_train_rel_pix = dict(zip(df_original_statistics["ID"], df_original_statistics["train_rel_pix_pres"]))
 idx_to_train_rel_im = dict(zip(df_original_statistics["ID"], df_original_statistics["train_rel_im_pres"]))
@@ -38,7 +42,6 @@ idx_to_train_rel_im = dict(zip(df_original_statistics["ID"], df_original_statist
 
 
 #create table
-
 tabular_F1 = []
 for cls_id in range(len(F1_BL)):
     if cls_id not in bbox_map:
@@ -75,6 +78,9 @@ df = df.sort_values(by="bbox_count",ascending=False)
 print(df)
 
 
+############# create plot ##########
+#how much did F1 did change absolutely? 
+#the class is sorted by boundingboxcount
 x_labels = df["class_id"].tolist()                  
 x_positions = range(len(df))                          
 y = df["F1_abs_change"]
@@ -86,11 +92,14 @@ plt.ylabel("F1_abs_change")
 plt.title("F1 absolute change per class (sorted by additional trees)")
 plt.xticks(x_positions, x_labels, rotation=90)
 plt.tight_layout()
-plt.savefig("F1_abs_change_vs_class_id_sorted_bboxcount.png", dpi=300)
+#plt.savefig("resulting_images/F1_abs_change_vs_class_id_sorted_bboxcount.png", dpi=300)
 plt.close()
 
 
 
+
+#create plot
+#how much did F1 change absolutely depending on the ratio new/old trees per specie
 x = df["ratio"]
 y = df["F1_abs_change"]
 
@@ -102,5 +111,5 @@ plt.ylabel("F1_abs_change")
 plt.title("F1 absolute change vs. new Bboxes/original presence")
 
 plt.tight_layout()
-plt.savefig("F1_abs_change_vs_ratio.png", dpi=300)
+plt.savefig("resulting_images/F1_abs_change_vs_ratio.png", dpi=300)
 plt.close()
