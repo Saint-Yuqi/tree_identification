@@ -1,6 +1,15 @@
-#!/usr/bin/env python3
+import argparse
+import os
+import sys
+from typing import Dict, Tuple, List
+
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+import yaml
+
+
 """
-Overlay semantic segmentation label masks onto images for visualization.
+Overlay semantic segmentation label masks onto images for visualisation.
 
 Assumptions:
 - Images are in a directory like .../test/images
@@ -19,14 +28,6 @@ Usage: (change directoriepath)
     --classes_yaml /home/c/shursc/code/tree_identification/configs/data/treeAI_classes.yaml
 """
 
-import argparse
-import os
-import sys
-from typing import Dict, Tuple, List
-
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-import yaml
 
 
 def ensure_dir(path: str) -> None:

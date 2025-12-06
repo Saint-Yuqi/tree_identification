@@ -4,7 +4,8 @@ from typing import Sequence
 
 
 """ this file creates a map from specie to genus 
-This is used to make the confusion matrix on genus level"""
+The map is used to make the confusion matrix on genus level
+output: configs/genus/treeAI_genus.yaml"""
 
 
 

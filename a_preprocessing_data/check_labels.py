@@ -2,9 +2,21 @@ from PIL import Image
 import numpy as np
 import cv2
 import csv
-import matplotlib.pyplot as plt
 import os
 import xml.etree.ElementTree as ET
+from collections import Counter
+
+
+"""
+this file was used to determine which labels can be correct. It does the following
+
+- show image with Bounding Boxes
+    -input: Image & label paths 
+            -labels which should be shown (numbers)
+    -output: image with drawn bboxes for the specified classes
+- count number of bounding bboxes per class (~line 80)
+    -output: in terminal bounding boxes per class, and as a csv file
+"""
 
 # Load image
 image_link = "/home/c/shursc/data/TreeAI/12_RGB_SemSegm_640_fL/train/labels/000000002490.png"
@@ -32,10 +44,12 @@ os.makedirs(output_folder, exist_ok=True)
 img = cv2.imread(image_path)
 img_h, img_w = img.shape[:2]
 
-# Labeldatei zeilenweise lesen
+
+
 with open(label_path, "r") as f:
     lines = f.readlines()
 
+#draw boundingboxes
 for line in lines:
     cls, x_c, y_c, w, h = map(float, line.split())
     cls = int(cls)
@@ -43,7 +57,7 @@ for line in lines:
     if cls not in keep_labels:
         continue
 
-    # YOLO -> Pixelkoordinaten umrechnen
+    # YOLO -> pixel coordinates
     x_c *= img_w
     y_c *= img_h
     w *= img_w
@@ -64,6 +78,8 @@ cv2.imwrite(output_path, img)
 print(f"Saved result to {output_path}")
 
 
+
+
 # --------------------------------------------------------------------
 # Count number of Bboxes per species/class in new_Bbox/test
 # --------------------------------------------------------------------
@@ -71,7 +87,7 @@ print(f"Saved result to {output_path}")
 new_root = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks"
 bbox_dir = os.path.join(new_root, "test", "new_Bbox")
 
-from collections import Counter
+
 bbox_counter = Counter()
 
 def count_from_txt(path):
@@ -104,9 +120,11 @@ for fname in os.listdir(bbox_dir):
     else:
         count_from_xml(full)
 
+
 print("Bounding boxes per species in test/new_Bbox:")
 for cls_id, count in sorted(bbox_counter.items()):
     print(f"Class {cls_id}: {count}")
+
 
 #save output to csv
 csv_path = os.path.join(bbox_dir, "bbox_counts_additional_12_images.csv")

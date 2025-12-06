@@ -3,8 +3,16 @@ import json
 import rasterio
 
 
-"""This file can be used to change the labels """
+"""
+This file can be used to change the labels
+input: 
+- directory that contains labels (masks) in .png or .tif format
+- mapping file (old to new label) (.json)
 
+output: new labels for each image in input file (masks) in same format as inputs
+ """
+
+#specify input/output directory an mapping
 input_dir = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_both/pick/labels_from_Bbox"
 output_dir = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_both/pick/labels_Bbox_changed"
 mapping_file = "label_mapping.json"
@@ -16,6 +24,8 @@ os.makedirs(output_dir, exist_ok=True)
 with open(mapping_file, "r") as f:
     value_mapping = json.load(f)
 
+
+#change the labels
 def correct_mask(mask, mapping):
     mask_corrected = mask.copy()
     for old, new in mapping.items():
@@ -23,6 +33,7 @@ def correct_mask(mask, mapping):
     return mask_corrected
 
 
+#change labels for each image
 for root, _, files in os.walk(input_dir):
     for file in files:
         if not file.lower().endswith((".png", ".tif")):
@@ -48,6 +59,7 @@ for root, _, files in os.walk(input_dir):
 
         mask_corrected = correct_mask(mask, mapping)
 
+        #save new file
         with rasterio.open(output_path, "w", **meta) as dst:
             dst.write(mask_corrected, 1)
 

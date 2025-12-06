@@ -8,10 +8,13 @@ import shutil
 import json
 
 ''' This file helps to compare Bbox and Mask labels between ObjDet and SemSegm Data
-- which images are in both datasets?
-- how do indices relate?
+- which images are in both datasets? (~140)
+- how do indices relate? (~ 190)
+- find images that belong to a certain class (~ 220)
+- given an SemSegm image, is there a corresponding ObjDet image ? ( ~ 230)
 
-+ commmented out:
+
+Additionally ( commmented out) (~240):
 - creates new directories for shared and non-shared images
 '''
 
@@ -179,9 +182,11 @@ for h in common_hashes:
         break
 
 
-# Build table to compare indices
-records = []
 
+#################################
+# Build table to compare indices
+#############################3
+records = []
 for h in common_hashes:
     for folderA, fnameA, fullA in map_A[h]:
         for folderB, fnameB, fullB in map_B[h]:
@@ -198,13 +203,13 @@ for h in common_hashes:
                 "IndexSemSegm": unique_A,
                 "IndexObjDet": unique_B
             })
-
 df = pd.DataFrame(records)
 print(df.head(10))
 
 
-
+##################################
 # Filter for images for certain classes (ObjDet Index)
+###################################
 
 classnumber= 40
 df_labelx = df[df["IndexObjDet"].apply(lambda lst: lst is not None and classnumber in lst)]
@@ -216,8 +221,11 @@ print(df_labelx.head(10))
 
 
 
-#find corresponding match
 
+
+########################################
+#find corresponding match
+########################################
 semsegm_image = "/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/train/images/000000000317.png"
 
 matches = find_objdet_for_semsegm(semsegm_image, map_A, map_B)
@@ -227,6 +235,7 @@ if not matches:
 else:
     for folder, fname, fullpath in matches:
         print("Matching ObjDet image:", fullpath)
+
 
 
 
