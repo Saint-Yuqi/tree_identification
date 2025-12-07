@@ -1,8 +1,9 @@
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
 from omegaconf import DictConfig
 
+#build a learning-rate scheduler from config
 def get_scheduler(optimizer, scheduler_config: DictConfig):
-    scheduler_type = scheduler_config['type']
+    scheduler_type = scheduler_config['type'] #tpye: scheduler class name
     scheduler_params = scheduler_config.get('params', {})
 
     if scheduler_type == "CosineAnnealingLR":

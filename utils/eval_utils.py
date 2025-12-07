@@ -4,6 +4,7 @@
 Created on Mon Aug  5 16:52:49 2024
 
 @author: lukas
+(+ a bit changed by us)
 """
 import sys, os, io, time
 import json
@@ -21,6 +22,19 @@ from utils.utils import denormalize, convert_ndarray_to_list
 from torchmetrics.classification import MulticlassAccuracy, MulticlassF1Score, MulticlassConfusionMatrix
 from torchmetrics import JaccardIndex
 from sklearn.metrics import ConfusionMatrixDisplay
+
+
+"""this file does the following:
+
+    - Evaluate models using confusion matrices and patch-based metrics
+    - Compute semantic segmentation metrics (accuracy, IoU, F1, precision, recall)
+    - Apply precision/recall boosting based on uncertainty
+    - Evaluate sample-wise metrics and save intermediate results
+    - Visualize images, predictions, reference masks, and variance maps
+    - Visualize and save confusion matrices (per-class and per-genus)
+    - Compute softmax entropy
+    - Count errors by distance bins using a confusion matrix
+"""
 
 
 # =============================================================================
@@ -554,6 +568,7 @@ def count_errors_by_distance(conf, distance_matrix, bins_edges=[0.0, 3.0, 6.0, 1
     errors = conf[error_mask]
     distances = distance_matrix[error_mask]
     
+    #check in which bin the error is and count for it
     errors_by_bin = {}
     for i in range(len(bins_edges) - 1):
         low = bins_edges[i]
@@ -567,6 +582,7 @@ def count_errors_by_distance(conf, distance_matrix, bins_edges=[0.0, 3.0, 6.0, 1
         count = errors[bin_mask].sum()
         errors_by_bin[f"{low}–{high}"] = int(count)
 
+    #sum up total errors
     total_errors = errors.sum()
     total_errors = int(errors.sum())
     

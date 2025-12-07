@@ -1,10 +1,11 @@
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
+#build albumentations transform pipeline from config
 def get_transforms(transform_config, additional_targets={}):
     transforms_list = []
     for transform in transform_config:
-        transform_type = transform['type']
+        transform_type = transform['type'] #transformername
         params = transform.get('params', {})
         try:
             transform_class = getattr(A, transform_type)

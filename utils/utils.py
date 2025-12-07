@@ -1,10 +1,3 @@
-"""
-===============================================================================
-Utils
-===============================================================================
-
-"""
-
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -13,6 +6,19 @@ import re
 from typing import Literal
 from omegaconf import ListConfig, DictConfig
 
+"""
+Utility functions for data handling, normalisation, file traversal, target
+conversion, and general helpers used across the segmentation pipeline.
+
+Includes:
+    - image denormalisation
+    - recursive file discovery
+    - folder creation
+    - ndarray <-> list conversion
+    - mask/target conversion (multilabel + multiclass)
+    - dataset name extraction
+    - list-wrapping of config directory paths
+"""
 
 # =============================================================================
 # denormalize numpy image
