@@ -19,6 +19,19 @@ from utils.eval_utils import evaluate_model, evaluate_model_samplewise, visualiz
 from utils.transform_utils import get_transforms
 from utils.callback_utils import get_callbacks
 
+
+
+"""use this script to train the model
+
+things which can be changed: 
+- everything in the configuration file (loss, modelchoice) 
+- parameters (ratio between losses)
+- distance matrix for hierarchical loss or to calculate AHC (~80)
+- for Prototypical  model: amount of prototypes (~90)
+- ratio between losses, embedding dimension(~95)
+"""
+
+
 # # this can avoid avoid shared memory allocation errors
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -39,26 +52,16 @@ def main(cfg: DictConfig) -> None:
     if cfg.pl_seed:
         seed_everything(cfg.pl_seed, workers=True)
     
-    #%% dataModule
+    #%% dataModule (get transforms)
     train_transforms = get_transforms(cfg.data.train_transforms)
     val_transforms = get_transforms(cfg.data.val_transforms)
     test_transforms = get_transforms(cfg.data.test_transforms)
     dataModule = SegmentationDataModule(cfg.data.image_dir, cfg.model.num_classes, train_transforms, val_transforms, test_transforms, weightedSampling=cfg.data.weightedSampling, value_mapping=cfg.data.value_mapping, ignore_index=cfg.data.ignore_index, batch_size=cfg.data.batch_size, num_workers=cfg.data.num_workers)
 
-    # # setup dataModule
+    # setup dataModule
     dataModule.prepare_data()
     dataModule.setup()
     print('# Train imgs: ', len(dataModule.train_dataset))
-    
-    # # get statistics of dataset
-    # if cfg.data.weightedSampling:     
-    #     class_presence = dataModule.train_dataset.class_presence
-    #     total = Counter()
-    #     for d in class_presence:
-    #         total.update(d)
-    #     total_class_presence = dict(total)
-    #     get_keys = [key for key, value in total_class_presence.items() if value >1 and value <=50]
-    #     print(get_keys)
     
     # # visualize dims of single image + mask
     for idx, batch in enumerate(dataModule.train_dataloader()):
@@ -73,26 +76,26 @@ def main(cfg: DictConfig) -> None:
     
     n_classes = cfg.model.num_classes
     #cost matrix:
-    D_path = "distancematrix/phylogenetic_distance_matrix.pt"
+    D_path = "distancematrix/taxonomy_distance_matrix.pt" # for hierarchical loss
     D = torch.load(D_path)
-    D_path_eval = "distancematrix/eval_phylogenetic_distance_matrix.pt"
+    D_path_eval = "distancematrix/taxonomy_distance_matrix.pt" #to calculate AHC
     D_eval= torch.load(D_path_eval)
 
-    #D = torch.full((n_classes, n_classes), 0.3) #should later be replaced by distance matrix
-    #SD.fill_diagonal_(0) #it's included in the model now!!
     #%% model
-    #TODO: change configurationfiles if neede
     modelchoice = cfg.model.modelchoice
-    nr_prototypes_per_class = [1]*cfg.model.num_classes
-    nr_prototypes_per_class[0]=4
+
+    #only used for ProtoSegModel 
+    nr_prototypes_per_class = [1]*cfg.model.num_classes #amount of prototypes per class
+    nr_prototypes_per_class[0]=4 #amount of prototypes for background class
 
     if modelchoice == 'SegmentationModel':
-        model = SegmentationModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, d_matrix=D, d_matrix_eval=D_eval, lossratio=3)
+        model = SegmentationModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, d_matrix=D, d_matrix_eval=D_eval, lossratio=1)
     elif modelchoice == 'ProtoSegModel':
         model = ProtoSegModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, num_prototypes_per_class=nr_prototypes_per_class, d_matrix=D, d_matrix_eval=D_eval, embedding_dim=16, lambda_d=0.3, lambda_CE = 0.5) #had 0.3 before now
     else:
         raise ValueError('Model Choice invalid')
     
+
     #%% training
     callbacks = get_callbacks(cfg.model.callbacks)
     logger = WandbLogger(name=cfg.exp_name,project=cfg.log_name)
@@ -116,6 +119,7 @@ def main(cfg: DictConfig) -> None:
     trainer.test(model=model, dataloaders=dataModule)
     wandb.finish()
     
+
     # # all class names and colors in order of index
     class_names = [cfg.data.classes[i].name for i in sorted(cfg.data.classes.keys(), key=int)]
     class_colors = [cfg.data.classes[i].color for i in sorted(cfg.data.classes.keys(), key=int)]

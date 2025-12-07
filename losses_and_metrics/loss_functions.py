@@ -3,6 +3,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
+"""
+This file defines the following classes 
+- HierarchicalLoss
+- ProtoHierarchicalLoss
+- Eucl_Mat
+- Cosine_Mat
+- DistortionLoss
+"""
+
 
 class HierarchicalLoss(nn.Module):
     def __init__(self, distance_matrix: torch.Tensor, ignore_index: int = -1, reduction: str = 'mean'):
@@ -25,21 +34,21 @@ class HierarchicalLoss(nn.Module):
          
         # Flatten spatial dimensions to compute per-pixel loss
         B, C, H, W = logits.shape
-        probs = F.softmax(logits, dim=1)  # change model outputs to probabilities mit e^.. 
+        probs = F.softmax(logits, dim=1)  # change model outputs to probabilities
         probs_flat = probs.permute(0, 2, 3, 1).reshape(-1, C)  # (B, H, W, C) -> (N, C) N =B*H*C
         targets_flat = targets.reshape(-1)  # 1D vector (N,)
         
         #get rid of invalid indices
-        valid_mask = targets_flat != self.ignore_index #should be considered in the loss (T vs. F) #for each pixel individually
+        valid_mask = targets_flat != self.ignore_index 
         if not torch.any(valid_mask):
             return probs_flat.new_tensor(0.0, requires_grad=True)
-        targets_valid = targets_flat[valid_mask] #remove pixels which are not used
+        targets_valid = targets_flat[valid_mask] 
         probs_valid = probs_flat[valid_mask]  # (N_valid, C)
         
         
         # calculate the loss:
-        D_y = self.D[targets_valid]  # (N_valid, C) for each pixel individual the row in D
-        losses = torch.sum(probs_valid * D_y, dim=1)  # (N_valid,), elementwise multiplication (dim 1)
+        D_y = self.D[targets_valid]  
+        losses = torch.sum(probs_valid * D_y, dim=1)  
 
         if self.reduction == 'mean':
             return losses.mean()
@@ -49,16 +58,19 @@ class HierarchicalLoss(nn.Module):
             return losses
 
 class ProtoHierarchicalLoss(nn.Module):
-    ''' eq. 3'''
+    ''' Proto Hierarchical Loss '''
+
     def __init__(self, ignore_index = -1, reduction: str = 'mean'):
         super().__init__()
         self.ignore_index = ignore_index
         self.reduction = reduction
     
     def forward(self, dists: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        ''' dists: negative distances for each pixel to all prototypes
+        ''' 
+        imputs:
+        dists: negative distances for each pixel to all prototypes
         targets: true_labels
-        need to be changed - i need outputs for each pixel?
+        output: loss per pixel
         '''
        
         # Flatten spatial dimensions to compute per-pixel loss
@@ -67,11 +79,11 @@ class ProtoHierarchicalLoss(nn.Module):
         targets_flat = targets.reshape(-1)  # 1D vector (N,)
         
         #get rid of invalid indices
-        valid_mask = targets_flat != self.ignore_index #should be considered in the loss (T vs. F) #for each pixel individually
+        valid_mask = targets_flat != self.ignore_index 
         if not torch.any(valid_mask):
             return dists_flat.new_tensor(0.0, requires_grad=True)
-        targets_valid = targets_flat[valid_mask] #remove pixels which are not used
-        dists_valid = dists_flat[valid_mask]  # (N_valid, C)
+        targets_valid = targets_flat[valid_mask] 
+        dists_valid = dists_flat[valid_mask] 
         
         
         # calculate the loss:
@@ -127,12 +139,13 @@ class Cosine_Mat(nn.Module):
         return 1 - nn.CosineSimilarity(dim=-1)(mapping[:, None, :], mapping[None, :, :])
 
 
-'''For DistortionLoss:
-    This class was originally implemented by Sainte Fare Garnot, Vivien  and Landrieu, Loic
-    I only changed the epsilon in case we have some zeros in our matrix.
-    see original version: torch_prototypes.metrics.distortion -> DistortionLoss  (arXiv:2007.03047) '''
+
 class DistortionLoss(nn.Module):
-    """Scale-free squared distortion regularizer"""
+    '''For DistortionLoss:
+    This class was originally implemented by Sainte Fare Garnot, Vivien  and Landrieu, Loic
+    we only added the epsilon in case we have some zeros in our matrix.
+    see original version: torch_prototypes.metrics.distortion -> DistortionLoss  (arXiv:2007.03047) '''
+    
 
     def __init__(self, D, dist="euclidian", scale_free=True):
         super(DistortionLoss, self).__init__()
@@ -145,7 +158,7 @@ class DistortionLoss(nn.Module):
 
     def forward(self, mapping, idxs=None):
         d = self.dist(mapping)  
-        eps= 1e-8 #changed from me ... also in the denominator below.
+        eps= 1e-8 #changed from us
 
 
         if self.scale_free:
