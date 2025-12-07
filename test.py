@@ -18,6 +18,21 @@ from utils.utils import make_dir, shrink_dict, getListOfFiles, natural_keys
 from utils.eval_utils import evaluate_model, evaluate_model_samplewise, visualize_results, visualize_save_confusions, visualize_scores_per_class, visualize_confusion_genus, count_errors_by_distance
 from utils.transform_utils import get_transforms
 
+""" 
+This script is used to test a pre-trained segmentation model using a Hydra configuration.
+It supports:
+
+- Loading a trained checkpoint and setting up the model.
+- Preparing the data using SegmentationDataModule with test transforms.
+- Evaluating the model both dataset-wise and sample-wise.
+- Computing quantitative metrics (F1, IoU, Precision, Recall) and error analysis by distance.
+- Visualizing results, confusion matrices, and qualitative predictions.
+- Logging metrics to Weights & Biases (WandB).
+
+Note: Adjust the config files and checkpoint paths before running.
+
+"""
+
 # # this can avoid avoid shared memory allocation errors
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -65,13 +80,12 @@ def main(cfg: DictConfig) -> None:
     ckpt_name = ckpt_path[ckpt_path.rindex('/')+1:-5]
     print('ckpt_path: ', ckpt_path)
     print('ckpt_name: ', ckpt_name)
-    cfg.ckpt_type = ckpt_name # adjust ckpt_type to get also the epoch number in the test file path (e.g. not only "best" but "best_epoch=451.ckpt")
-    OmegaConf.resolve(cfg) # since test_path is dynamically set in the hydra config we need to run the interpolation again with modified ckpt_type
-    # # load model with ckpt_path weights
+    cfg.ckpt_type = ckpt_name 
+    OmegaConf.resolve(cfg) 
     model = SegmentationModel.load_from_checkpoint(ckpt_path).to(device)
     
     #change evaluation matrix:
-    D_path_eval = cfg.d_matrix_eval #"distancematrix/eval_phylogenetic_distance_matrix.pt"
+    D_path_eval = cfg.d_matrix_eval 
     d_matrix_eval= torch.load(D_path_eval)
     model.hparams.d_matrix_eval=d_matrix_eval
     model.test_AHC.D = d_matrix_eval
@@ -82,10 +96,13 @@ def main(cfg: DictConfig) -> None:
     model.hparams.genus_to_index=genus_to_index
     model.hparams.specie_to_genus=specie_to_genus
 
-
-    threshold = None# 0.041 #this is the threshold for the data to set it to background. #1/62=0.016
+    #set pixel as background if all predictions are below a certain treshold
+    #not recomended (didnt work that good)
+    threshold = None
     print(f"!Threshold set to {threshold}")
     name = f"{cfg.exp_name}_test_{threshold}"
+
+    # initialize logger, run test loop on the model 
     logger = WandbLogger(name=name, project=cfg.log_name)
     trainer = pl.Trainer(logger=logger)
     trainer.test(model=model, dataloaders=dataModule)   
@@ -94,7 +111,6 @@ def main(cfg: DictConfig) -> None:
     class_names = [cfg.data.classes[i].name for i in sorted(cfg.data.classes.keys(), key=int)]
     class_colors = [cfg.data.classes[i].color for i in sorted(cfg.data.classes.keys(), key=int)]
     labels_sorted = [k for k,_ in sorted(model.hparams.genus_to_index.items(), key=lambda x: x[1])]
-    
     
     #%% dataset-wise evaluation
     test_loader = dataModule.test_dataloader()
@@ -118,6 +134,7 @@ def main(cfg: DictConfig) -> None:
     columns = ["model_name", "class_name", "F1", "IoU", "Precision", "Recall"]
     metrics_table = wandb.Table(columns=columns)
 
+    #log metrics per class
     for idx, class_name in enumerate(class_names):
         metrics_table.add_data(
             cfg.exp_name,                    # model/run name

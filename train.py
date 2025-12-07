@@ -22,6 +22,11 @@ from utils.callback_utils import get_callbacks
 
 
 """use this script to train the model
+it 
+- loads the data (does transformations)
+- trains the model
+- evaluates the model (calculate metrices)
+- creates figures
 
 things which can be changed: 
 - everything in the configuration file (loss, modelchoice) 
@@ -30,6 +35,7 @@ things which can be changed:
 - for Prototypical  model: amount of prototypes (~90)
 - ratio between losses, embedding dimension(~95)
 """
+
 
 
 # # this can avoid avoid shared memory allocation errors
@@ -89,7 +95,7 @@ def main(cfg: DictConfig) -> None:
     nr_prototypes_per_class[0]=4 #amount of prototypes for background class
 
     if modelchoice == 'SegmentationModel':
-        model = SegmentationModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, d_matrix=D, d_matrix_eval=D_eval, lossratio=1)
+        model = SegmentationModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, d_matrix=D, d_matrix_eval=D_eval, lossratio=0.5)
     elif modelchoice == 'ProtoSegModel':
         model = ProtoSegModel(cfg.model.model, cfg.model.encoder_name, cfg.model.img_size, cfg.model.num_classes, cfg.model.lr, ignore_index=cfg.data.ignore_index, optimizer=cfg.model.optimizer, lr_scheduler=cfg.model.lr_scheduler, loss=cfg.model.loss, weight=cfg.model.weight, patch_2_img_size=cfg.model.patch_2_img_size, num_prototypes_per_class=nr_prototypes_per_class, d_matrix=D, d_matrix_eval=D_eval, embedding_dim=16, lambda_d=0.3, lambda_CE = 0.5) #had 0.3 before now
     else:
@@ -115,6 +121,14 @@ def main(cfg: DictConfig) -> None:
         model = SegmentationModel.load_from_checkpoint(ckpt_path).to(device)
     elif modelchoice == 'ProtoSegModel':
         model = ProtoSegModel.load_from_checkpoint(ckpt_path).to(device)
+
+    #add specie_to_genus and genus index information (to produce genus wise confusion matrix)
+    genus_to_index=cfg.genus.genus_to_index
+    specie_to_genus=cfg.genus.specie_to_genus_index
+    model.hparams.genus_to_index=genus_to_index
+    model.hparams.specie_to_genus=specie_to_genus
+
+    #evaluate model
     model.eval()
     trainer.test(model=model, dataloaders=dataModule)
     wandb.finish()
