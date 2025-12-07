@@ -1,3 +1,4 @@
+#specify which data should be used and which transformations should be applied
 defaults:
   - data
   - treeAI_classes
@@ -10,23 +11,42 @@ image_dir:
   train:
     - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/train'
     - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/train'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks/train'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks/val'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks/test'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_both/train'
     #- '/zfs/ai4good/student/shursc/treeAI/0_RGB_fL_processed/train' #! change path to your local folder
     #- '/zfs/ai4good/student/shursc/treeAI/5_RGB_S_320_pL/train'
     #- '/zfs/ai4good/student/shursc/treeAI/12_RGB_ObjDet_640_fL/train'
     #- '/zfs/ai4good/student/shursc/treeAI/34_RGB_ObjDet_640_pL_a/train'
     #- '/zfs/ai4good/student/shursc/treeAI/34_RGB_ObjDet_640_pL_b/train'
-
+    
 
   val:
     - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/val'
     - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/val'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks/val'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_both/val'
 
   test:
     - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/test'
     - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/test'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_both/test'
+    #- '/zfs/ai4good/student/shursc/treeAI/12_RGB_ObjDet_640_fL/test'
+    #- '/zfs/ai4good/student/shursc/treeAI/34_RGB_ObjDet_640_pL_a/test'
+    #- '/zfs/ai4good/student/shursc/treeAI/34_RGB_ObjDet_640_pL_b/test'
+    #- '/zfs/ai4good/student/shursc/treeAI/12_RGB_ObjDet_640_fL/test'
+    #- '/zfs/ai4good/student/shursc/treeAI/34_RGB_ObjDet_640_pL_a/test'
+    #- '/zfs/ai4good/student/shursc/treeAI/34_RGB_ObjDet_640_pL_b/test'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks/train'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks/test'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_ObjDet_new_masks/val'
+
+
   pick:
     - '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_SemSegm_640_fL/pick'
     - '/zfs/ai4good/datasets/tree/TreeAI/34_RGB_SemSegm_640_pL/pick'
+    #- '/zfs/ai4good/datasets/tree/TreeAI/12_RGB_both/test'
 
 crop_size_train: 320
 crop_size_train_tuple:

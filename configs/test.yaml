@@ -1,6 +1,7 @@
 defaults:
   - _self_
   - data: data
+  - genus: treeAI_genus
   - model: model
   # # Only change Overrides (only one override per group (data/model/...) allowed)
   # # Command line override would look like: python train.py data=splitXY model=modelZ
@@ -9,10 +10,11 @@ defaults:
   - override hydra/launcher: submitit_slurm
 
 # # select exp_name and ckpt_type (best/last) for which test metrics are to be calculated
-exp_name: 20251119_093300.602560_Unet_resnet50_CE_320_62_wrs_True #20251026_190008.509178_Unet_resnet50_HierarchicalCE_320_62_wrs_True
+#BL: 20251119_093300.602560_Unet_resnet50_CE_320_62_wrs_True
+exp_name: 20251119_093300.602560_Unet_resnet50_CE_320_62_wrs_True 
 ckpt_type: best
 log_name: 'treeAI'
-d_matrix_eval: 'distancematrix/taxonomy_distance_matrix.pt' #"/home/c/shursc/code/tree_identification/distancematrix/taxonomy_distance_matrix.pt"
+d_matrix_eval: 'distancematrix/taxonomy_distance_matrix.pt' #include path to distance matrix for evaluation
 
 # # Reproducibility: pytorch lightning seed
 pl_seed: 42 # False or seed number, e.g., 42

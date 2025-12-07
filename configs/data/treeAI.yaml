@@ -1,6 +1,9 @@
+#we overrite this by treeAI.yaml 
+#but you could specify data and transformations
 defaults:
   - data
   - treeAI_classes
+
 
 weightedSampling: True
 batch_size: 8
