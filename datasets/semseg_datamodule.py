@@ -4,6 +4,14 @@ import pytorch_lightning as pl
 from datasets.semseg_dataset import SegmentationDataset
 from utils.utils import ensure_list_values
 
+'''This file creates the SegmentationDataModule class (Lightning DataModule)
+
+Handles:
+- creating train/val/test/pick datasets
+- applying different transforms per split
+- constructing the respective DataLoaders
+'''
+
 class SegmentationDataModule(pl.LightningDataModule):
     def __init__(self, image_dirs, num_classes, transform_train, transform_val, transform_test, weightedSampling=False, value_mapping=None, ignore_index=-1, load_label=None, batch_size=16, num_workers=4):
         super().__init__()

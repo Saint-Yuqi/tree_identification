@@ -11,8 +11,19 @@ from utils.utils import convert_mask_to_target, extract_dataset_name
 
 warnings.filterwarnings('ignore', category=NotGeoreferencedWarning)
 
+"""This file defines the SegmentationDataset class (PyTorch Dataset)
+
+    Responsibilities:
+    - Recursively scan dataset directories for images and corresponding masks
+    - Optionally apply a value-mapping to unify label sets across datasets
+    - Optionally compute class-presence statistics for weighted sampling
+    - Load geospatial metadata if requested
+    - Apply Albumentations transforms to (image, mask) pairs
+"""
 
 class SegmentationDataset(Dataset):
+   
+
     def __init__(self, image_dirs, num_classes, transform=None, geo=None, weightedSampling=None, value_mapping=None, ignore_index=-1, load_label=None):
         self.image_dirs = image_dirs if isinstance(image_dirs, ListConfig) or isinstance(image_dirs, list) else [image_dirs]
         self.num_classes = num_classes
@@ -32,7 +43,7 @@ class SegmentationDataset(Dataset):
                 self.image_files.extend(sorted([os.path.join(root, f) for f in files if f.lower().endswith(('.tif', '.png', '.jpg'))]))
             masks_subdir = os.path.join(image_dir, "masks")
             if not os.path.isdir(masks_subdir):
-                masks_subdir = os.path.join(image_dir, "labels")
+                masks_subdir = os.path.join(image_dir, "labels") #labels__Bbox_changed
             for root, _, files in sorted(os.walk(masks_subdir)):
                 self.mask_files.extend(sorted([os.path.join(root, f) for f in files if f.lower().endswith(('.tif', '.png'))]))
         
