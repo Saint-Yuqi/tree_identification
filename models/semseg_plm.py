@@ -19,6 +19,10 @@ from utils.scheduler_utils import get_scheduler
 -SegmentationModel
 -ProtoSegModel 
 """
+#if no other evaluation matrix is specified
+D_path_eval = "distancematrix/taxonomy_distance_matrix.pt" #to calculate AHC
+D_eval= torch.load(D_path_eval)
+
 
 class SegmentationModel(pl.LightningModule):
     def __init__(self, model, encoder_name, img_size, num_classes, learning_rate, ignore_index=-1, optimizer='AdamW', lr_scheduler=None, loss='CE', weight=None, patch_2_img_size=False, d_matrix=None, d_matrix_eval=D_eval, lossratio=3):
