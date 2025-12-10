@@ -1,7 +1,7 @@
 # 🌳 TreeAI Segmentation
 ![Tree segmentation example](examples/segmentation_example.jpg)
 A deep learning pipeline for **pixel-wise tree segmentation** from aerial imagery enabling both species classification and crown delineation.
-This repository is intended as a **starting point for further developments in tree segmentation** as part of the **UZH Master's course AI4Good**.
+This repository was created as part of the **UZH Master's course AI4Good**.
 
 ## ✨ Motivation
 Tree species segmentation plays a crucial role in **biodiversity monitoring**, **forest management**, and **climate change research**.  
@@ -58,7 +58,7 @@ Corresponding configuration files are in `configs/train.yaml` with second level 
 
 These files serve as the default configurations. The same structure applies for `test.py`, where at least the experiment name on which the evaluation is to take place must be specified in `test.yaml` or the command line.
 
-All parameters can be overwritten from the command line. If multiple data or model parameters need to be changed simultaneously, it is often convenient to create a custom YAML file following the same structure as the default files. They can then be overwritten again in the command line.
+Most parameters can be overwritten from the command line. If multiple data or model parameters need to be changed simultaneously, it is often convenient to create a custom YAML file following the same structure as the default files. They can then be overwritten again in the command line.
 ```
 python train.py data=data_treeAI_vernon model=model_UNet_resnet18
 ```
@@ -68,9 +68,14 @@ python train.py data=data_treeAI_vernon model=model_UNet_resnet18
 treeAI-segmentation/
 │── train.py                  # training script
 │── test.py                   # testing / evaluation
+|── a_preprocessing_data/     # used to create new folder and relabling data
+|── analyse_data/             # to show specie distributions
+|── analyse_results/          # plot and analyse results 
 │── configs/                  # hydra configuration files
 │── models/                   # model definitions
 │── datasets/                 # dataset loading & preprocessing
+|── distancematrix/           # create and store the distance matrix
+|── losses_and_metrixs/       # define additional lossfunctions and metrics
 │── utils/                    # helper functions
 data/
 │── TreeAI
@@ -89,5 +94,10 @@ data/
 │ │ │ ├── labels
 │ ├── 34_RGB_SemSegm_640_pL
 │ │ ├── ...
+| |─ 12_RGB_ObjDet_both      # data which is in both 12 ObjDet and 12 SemSegm datasets
+| | ── ...
+...
 ```
+For more information about the dataset folders check the README.txt files in the corresponding folders.
+
 
