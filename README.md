@@ -47,6 +47,7 @@ conda install conda-forge::scikit-learn
 # Segmentation models
 pip install segmentation-models-pytorch
 ```
+All requirements can be found in requirements.txt
 
 ## 🚀 Training & Testing
 This repository uses Hydra for flexible experiment configuration. So model training can be just started with `train.py`. 
@@ -98,6 +99,6 @@ data/
 | | ── ...
 ...
 ```
-For more information about the dataset folders check the README.txt files in the corresponding folders.
+For more information about the dataset folders check the README.txt files in the corresponding folder.
 
 
