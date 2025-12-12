@@ -417,8 +417,22 @@ def visualize_results(imgs, masks, preds, colors, variances=None, num_samples=5,
     custom_cmap = ListedColormap(colors)
     custom_cmap0 = ListedColormap(colors[1:]) # without background class
     
+    # Determine which class IDs actually appear in the displayed masks
+    used_classes = set()
+
+    for i in vis_idx:
+        used_classes.update(np.unique(masks[i]))
+        used_classes.update(np.unique(preds[i]))
+
+    # Remove background class (0), because the legend should not show it
+    used_classes.discard(0)
+
     if class_names:
-        legend_patches = [mpatches.Patch(color=colors[1:][i], label=class_names[1:][i]) for i in range(len(class_names)-1)]
+        legend_patches = [mpatches.Patch(color=colors[c], label=class_names[c]) for c in sorted(used_classes)
+        ]
+
+    #if class_names:
+     #   legend_patches = [mpatches.Patch(color=colors[1:][i], label=class_names[1:][i]) for i in range(len(class_names)-1)]
     
     # 1. plot: RGB - Reference - Prediction - [Variance]
     if variances is not None:
@@ -433,7 +447,7 @@ def visualize_results(imgs, masks, preds, colors, variances=None, num_samples=5,
             plt.axis('off')
     
             plt.subplot(num_samples, 4, count * 4 + 2)
-            if count == 0: plt.title('Reference',fontsize=22)
+            if count == 0: plt.title('Real masks',fontsize=22) 
             plt.imshow(masks[i], cmap=custom_cmap, vmin=0, vmax=len(colors)-1)
             plt.axis('off')
     
@@ -460,7 +474,7 @@ def visualize_results(imgs, masks, preds, colors, variances=None, num_samples=5,
             plt.axis('off')
     
             plt.subplot(num_samples, 3, count * 3 + 2)
-            if count == 0: plt.title('Reference',fontsize=22)
+            if count == 0: plt.title('Real masks',fontsize=22)
             plt.imshow(masks[i], cmap=custom_cmap, vmin=0, vmax=len(colors)-1)
             plt.axis('off')
     
@@ -476,14 +490,15 @@ def visualize_results(imgs, masks, preds, colors, variances=None, num_samples=5,
             handles=legend_patches,
             loc='center left',                # Anchor the legend to the left-center of bbox
             bbox_to_anchor=(1.0, 0.5),      # Place it outside the figure to the right
-            ncol=2,                           # Two columns
-            fontsize=16,                      # Adjust font size
-            borderaxespad=0.
+            ncol=1,                           # Two columns
+            fontsize=20,                    # Adjust font size
+            frameon=False,                     
+            borderaxespad=0.,
         )
     plt.tight_layout()
 
     if save_dir:
-        plt.savefig(os.path.join(save_dir,'qual_'+str(which)+'.jpg'), dpi=300, bbox_inches='tight')
+        plt.savefig(os.path.join(save_dir,'qual_'+str(which)+'.pdf'), dpi=300, bbox_inches='tight')
     plt.close()
     
     
@@ -521,14 +536,15 @@ def visualize_results(imgs, masks, preds, colors, variances=None, num_samples=5,
             handles=legend_patches,
             loc='center left',                # Anchor the legend to the left-center of bbox
             bbox_to_anchor=(1.0, 0.5),      # Place it outside the figure to the right
-            ncol=2,                           # Two columns
-            fontsize=22,                      # Adjust font size
-            borderaxespad=0.
+            ncol=1,                           # Two columns
+            fontsize=22, 
+            frameon=False,                     # Adjust font size
+            borderaxespad=0.,
         )
     plt.tight_layout()
 
     if save_dir:
-        plt.savefig(os.path.join(save_dir,'overlay_'+str(which)+'.jpg'), dpi=300, bbox_inches='tight')
+        plt.savefig(os.path.join(save_dir,'overlay_'+str(which)+'.pdf'), dpi=300, bbox_inches='tight')
     plt.close()
     
     

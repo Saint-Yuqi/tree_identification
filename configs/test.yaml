@@ -17,7 +17,7 @@ log_name: 'treeAI'
 d_matrix_eval: 'distancematrix/taxonomy_distance_matrix.pt' #include path to distance matrix for evaluation
 
 # # Reproducibility: pytorch lightning seed
-pl_seed: 42 # False or seed number, e.g., 42
+pl_seed: 42 #42 # False or seed number, e.g., 42
 
 log_dir: lightning_logs
 log_path: ${log_dir}/${exp_name}
@@ -26,8 +26,9 @@ test_path: ${log_path}/test_${now:%Y%m%d}_${now:%H%M%S.%f}_${ckpt_type}_${data.c
 
 matplotlib_backend: Agg
 matplotlib_style:
-  text.usetex: true
+  text.usetex: false 
   font.family: serif
+  font.sans-serif: Arial 
   pgf.texsystem: pdflatex
   pgf.rcfonts: false
   

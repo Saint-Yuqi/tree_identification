@@ -128,6 +128,19 @@ value_mapping:
     58: ${data.ignore_index} # genus
     59: ${data.ignore_index} # genus
     61: ${data.ignore_index} # genus
+  
+  12_RGB_both_from_bboxes:
+    31: ${data.ignore_index} # no/not enough data
+    37: ${data.ignore_index} # order
+    60: ${data.ignore_index} # order
+    5: ${data.ignore_index} # genus
+    11: ${data.ignore_index} # genus 
+    43: ${data.ignore_index} # genus
+    50: ${data.ignore_index} # genus
+    56: ${data.ignore_index} # genus
+    58: ${data.ignore_index} # genus
+    59: ${data.ignore_index} # genus
+    61: ${data.ignore_index} # genus
 
 
 # # Pixel value of pixels to be ignored during loss computation and evaluation 
