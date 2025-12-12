@@ -25,29 +25,8 @@ Clone this repo. Install [miniconda](https://www.anaconda.com/docs/getting-start
 conda create -n treeAI python=3.12
 conda activate treeAI
 
-# Base packages: numpy, pytorch, lightning
-conda install conda-forge::numpy
-pip3 install torch torchvision
-python -m pip install lightning
-
-# Visualization
-conda install conda-forge::matplotlib
-
-# Logging
-conda install conda-forge::wandb
-
-# Configs
-conda install conda-forge::hydra-core
-
-# Data
-conda install conda-forge::rasterio
-conda install conda-forge::albumentations
-conda install conda-forge::scikit-learn
-
-# Segmentation models
-pip install segmentation-models-pytorch
 ```
-All requirements can be found in requirements.txt
+Then install the needed requirements (see requirements.txt).
 
 ## 🚀 Training & Testing
 This repository uses Hydra for flexible experiment configuration. So model training can be just started with `train.py`. 
